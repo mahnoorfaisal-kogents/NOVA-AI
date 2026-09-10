@@ -17,8 +17,12 @@ import { useCallback } from "react";
 export function useNavigate() {
   const navigate = useTanstackNavigate();
   return useCallback(
-    (to: string, options?: { replace?: boolean }) => {
-      void navigate({ to, replace: options?.replace ?? false });
+    (to: string, options?: { replace?: boolean; state?: Record<string, unknown> }) => {
+      void navigate({
+        to,
+        replace: options?.replace ?? false,
+        state: (options?.state ?? {}) as never,
+      });
     },
     [navigate],
   );
