@@ -1,0 +1,1 @@
+COMMENT ON TABLE public.profiles IS 'NOVA user profile: name, avatar and plan tier.';
