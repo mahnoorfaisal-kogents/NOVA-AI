@@ -29,7 +29,7 @@ export function useLocation() {
 }
 
 export function useParams<T extends Record<string, string | undefined>>(): T {
-  return useTanstackParams({ strict: false }) as T;
+  return useTanstackParams({ strict: false } as never) as T;
 }
 
 export function NavLink({
