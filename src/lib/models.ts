@@ -3,7 +3,7 @@ import type { ModelInfo, ModelCapability, ProviderId, PlanTier } from '@/types';
 export const MODELS: ModelInfo[] = [
   {
     id: 'nova-fast',
-    provider: 'nova_default',
+    provider: 'nova_cloud',
     name: 'nova-fast',
     display_name: 'NOVA Fast',
     capabilities: ['general', 'fast', 'structured_output'],
@@ -16,7 +16,7 @@ export const MODELS: ModelInfo[] = [
   },
   {
     id: 'nova-standard',
-    provider: 'nova_default',
+    provider: 'nova_cloud',
     name: 'nova-standard',
     display_name: 'NOVA Standard',
     capabilities: ['general', 'reasoning', 'structured_output'],
@@ -29,7 +29,7 @@ export const MODELS: ModelInfo[] = [
   },
   {
     id: 'nova-reasoning',
-    provider: 'nova_default',
+    provider: 'nova_cloud',
     name: 'nova-reasoning',
     display_name: 'NOVA Reasoning',
     capabilities: ['reasoning', 'general', 'long_context'],
@@ -42,7 +42,7 @@ export const MODELS: ModelInfo[] = [
   },
   {
     id: 'nova-coding',
-    provider: 'nova_default',
+    provider: 'nova_cloud',
     name: 'nova-coding',
     display_name: 'NOVA Coding',
     capabilities: ['coding', 'reasoning', 'structured_output'],
@@ -55,7 +55,7 @@ export const MODELS: ModelInfo[] = [
   },
   {
     id: 'nova-research',
-    provider: 'nova_default',
+    provider: 'nova_cloud',
     name: 'nova-research',
     display_name: 'NOVA Research',
     capabilities: ['reasoning', 'long_context', 'general'],
@@ -68,7 +68,7 @@ export const MODELS: ModelInfo[] = [
   },
   {
     id: 'nova-vision',
-    provider: 'nova_default',
+    provider: 'nova_cloud',
     name: 'nova-vision',
     display_name: 'NOVA Vision',
     capabilities: ['vision', 'multimodal', 'general'],
@@ -81,7 +81,7 @@ export const MODELS: ModelInfo[] = [
   },
   {
     id: 'nova-long-context',
-    provider: 'nova_default',
+    provider: 'nova_cloud',
     name: 'nova-long-context',
     display_name: 'NOVA Long Context',
     capabilities: ['long_context', 'general', 'reasoning'],
@@ -94,7 +94,7 @@ export const MODELS: ModelInfo[] = [
   },
   {
     id: 'nova-multimodal',
-    provider: 'nova_default',
+    provider: 'nova_cloud',
     name: 'nova-multimodal',
     display_name: 'NOVA Multimodal',
     capabilities: ['multimodal', 'vision', 'general', 'reasoning'],
@@ -104,6 +104,19 @@ export const MODELS: ModelInfo[] = [
     cost_per_1k_output: null,
     available: true,
     min_plan: 'ultimate',
+  },
+  {
+    id: 'nova-local',
+    provider: 'ollama',
+    name: 'nova-local',
+    display_name: 'NOVA Local (Ollama)',
+    capabilities: ['general', 'fast', 'reasoning'],
+    context_window: 8000,
+    max_output: 4000,
+    cost_per_1k_input: null,
+    cost_per_1k_output: null,
+    available: true,
+    min_plan: 'free',
   },
 ];
 
