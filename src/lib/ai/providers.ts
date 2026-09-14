@@ -15,19 +15,17 @@ export interface AIResponse {
   error: string | null;
 }
 
-export interface AIProvider {
-  id: ProviderId;
-  name: string;
-  available: boolean;
-  configured: boolean;
-  chat(messages: ChatMessage[], model: string, options?: ChatOptions): Promise<AIResponse>;
-}
-
 export interface ChatOptions {
   temperature?: number;
   maxTokens?: number;
   systemPrompt?: string;
   signal?: AbortSignal;
+}
+
+export interface AIProvider {
+  id: ProviderId;
+  name: string;
+  chat(messages: ChatMessage[], model: string, options?: ChatOptions): Promise<AIResponse>;
 }
 
 const DEFAULT_SYSTEM_PROMPT =
@@ -54,19 +52,43 @@ export function setOllamaSettings(settings: { baseUrl: string; model: string }):
   window.localStorage.setItem(OLLAMA_MODEL_KEY, settings.model);
 }
 
+export interface LocalStatus {
+  reachable: boolean;
+  models: string[];
+  error: string | null;
+}
+
+/**
+ * Detects whether a local AI runtime is reachable and lists the models that
+ * are already installed. Nothing is ever downloaded automatically.
+ */
+export async function checkLocalAI(baseUrl?: string): Promise<LocalStatus> {
+  const url = (baseUrl ?? getOllamaSettings().baseUrl).replace(/\/$/, '');
+  try {
+    const response = await fetch(`${url}/api/tags`);
+    if (!response.ok) {
+      return { reachable: false, models: [], error: `Local AI answered with status ${response.status}.` };
+    }
+    const data = (await response.json()) as { models?: Array<{ name?: string }> };
+    const models = (data.models ?? []).map((m) => m.name ?? '').filter(Boolean);
+    return { reachable: true, models, error: null };
+  } catch {
+    return {
+      reachable: false,
+      models: [],
+      error: `No local AI found at ${url}. Start Ollama on this machine and try again.`,
+    };
+  }
+}
+
 function withSystemPrompt(messages: ChatMessage[], systemPrompt?: string): ChatMessage[] {
   return [{ role: 'system', content: systemPrompt ?? DEFAULT_SYSTEM_PROMPT }, ...messages];
 }
 
-/**
- * Cloud inference through NOVA's own backend, which routes to OpenRouter and
- * falls back to NVIDIA NIM. API keys never reach the browser.
- */
+/** Cloud inference through NOVA's own backend and the managed AI runtime. */
 class NovaCloudProvider implements AIProvider {
   id: ProviderId = 'nova_cloud';
-  name = 'NOVA Cloud (OpenRouter → NVIDIA NIM)';
-  available = true;
-  configured = true;
+  name = 'NOVA Cloud';
 
   async chat(messages: ChatMessage[], model: string, options?: ChatOptions): Promise<AIResponse> {
     try {
@@ -82,7 +104,7 @@ class NovaCloudProvider implements AIProvider {
       return {
         content: result.content,
         model,
-        provider: result.provider,
+        provider: 'nova_cloud',
         tokensInput: result.tokensInput,
         tokensOutput: result.tokensOutput,
         error: result.error,
@@ -100,16 +122,25 @@ class NovaCloudProvider implements AIProvider {
   }
 }
 
-/** Local inference on the user's own machine. Runs browser-side only. */
+/**
+ * Local inference on the user's own machine. Runs browser-side only and never
+ * falls back to the cloud, so Private/Offline modes stay on this device.
+ */
 class OllamaProvider implements AIProvider {
   id: ProviderId = 'ollama';
-  name = 'Ollama (Local)';
-  available = true;
-  configured = true;
+  name = 'On this device';
 
   async chat(messages: ChatMessage[], model: string, options?: ChatOptions): Promise<AIResponse> {
     const { baseUrl, model: configuredModel } = getOllamaSettings();
-    const localModel = model === 'nova-local' ? configuredModel : model;
+    const localModel = model.startsWith('nova-') ? configuredModel : model;
+    const fail = (error: string): AIResponse => ({
+      content: '',
+      model: localModel,
+      provider: this.id,
+      tokensInput: 0,
+      tokensOutput: 0,
+      error,
+    });
 
     try {
       const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/chat`, {
@@ -126,14 +157,7 @@ class OllamaProvider implements AIProvider {
 
       if (!response.ok) {
         const detail = await response.text();
-        return {
-          content: '',
-          model: localModel,
-          provider: this.id,
-          tokensInput: 0,
-          tokensOutput: 0,
-          error: `Local model request failed (${response.status}): ${detail.slice(0, 300)}`,
-        };
+        return fail(`Local AI request failed (${response.status}): ${detail.slice(0, 300)}`);
       }
 
       const data = (await response.json()) as {
@@ -152,23 +176,11 @@ class OllamaProvider implements AIProvider {
       };
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') {
-        return {
-          content: '',
-          model: localModel,
-          provider: this.id,
-          tokensInput: 0,
-          tokensOutput: 0,
-          error: 'Request cancelled',
-        };
+        return fail('Request cancelled');
       }
-      return {
-        content: '',
-        model: localModel,
-        provider: this.id,
-        tokensInput: 0,
-        tokensOutput: 0,
-        error: `Could not reach Ollama at ${baseUrl}. Make sure it is running locally.`,
-      };
+      return fail(
+        `No local AI found at ${baseUrl}. This mode only runs on your own machine, so NOVA will not use the cloud instead.`,
+      );
     }
   }
 }
@@ -178,17 +190,20 @@ const ollama = new OllamaProvider();
 
 const providers: Record<ProviderId, AIProvider> = {
   nova_cloud: novaCloud,
-  openrouter: { ...novaCloud, id: 'openrouter', name: 'OpenRouter', chat: novaCloud.chat.bind(novaCloud) },
-  nvidia_nim: { ...novaCloud, id: 'nvidia_nim', name: 'NVIDIA NIM', chat: novaCloud.chat.bind(novaCloud) },
   ollama,
 };
 
 export function getProvider(id: ProviderId): AIProvider {
-  return providers[id];
+  return providers[id] ?? novaCloud;
 }
 
 export function getAvailableProviders(): AIProvider[] {
   return [novaCloud, ollama];
+}
+
+export function providerLabel(id: ProviderId | null): string {
+  if (id === 'ollama') return 'On this device';
+  return 'NOVA Cloud';
 }
 
 export async function sendChat(

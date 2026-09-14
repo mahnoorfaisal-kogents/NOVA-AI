@@ -6,10 +6,10 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { sendChat, type ChatMessage } from '@/lib/ai/providers';
+import { sendChat, providerLabel, type ChatMessage } from '@/lib/ai/providers';
 import { routeModel, classifyTaskType } from '@/lib/ai/router';
 import { buildSystemPrompt } from '@/lib/ai/personality';
-import { getModelsForPlan, getDefaultModel } from '@/lib/models';
+import { getModelsForPlan } from '@/lib/models';
 import { getPlanLimits } from '@/lib/plans';
 import type { Conversation, Message, PersonalityType, ModelInfo } from '@/types';
 import { MarkdownRenderer } from '@/components/chat/MarkdownRenderer';
@@ -372,22 +372,25 @@ export function ChatView() {
               <ChevronDown className="w-3 h-3" />
             </button>
             {showModelMenu && (
-              <div className="absolute right-0 top-full mt-1 glass-strong rounded-lg shadow-xl py-1 min-w-[180px] z-50">
+              <div className="absolute right-0 top-full mt-1 glass-strong rounded-lg shadow-xl py-1 min-w-[240px] z-50">
                 <button
                   onClick={() => { setSelectedModel(null); setShowModelMenu(false); }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-secondary hover:text-primary hover:bg-tertiary"
+                  className="w-full flex flex-col items-start gap-0.5 px-3 py-2 text-xs text-secondary hover:text-primary hover:bg-tertiary"
                 >
-                  <span className="w-2 h-2 rounded-full bg-electric-500" /> Auto Route
+                  <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-electric-500" /> Auto</span>
+                  <span className="text-tertiary pl-4">NOVA picks the best mode for each message.</span>
                 </button>
-                {availableModels.map((m) => (
+                {availableModels.filter((m) => m.id !== 'nova-auto').map((m) => (
                   <button
                     key={m.id}
                     onClick={() => { setSelectedModel(m.id); setShowModelMenu(false); }}
-                    className={`w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-tertiary ${selectedModel === m.id ? 'text-electric-400' : 'text-secondary hover:text-primary'}`}
+                    className={`w-full flex flex-col items-start gap-0.5 px-3 py-2 text-xs hover:bg-tertiary ${selectedModel === m.id ? 'text-electric-400' : 'text-secondary hover:text-primary'}`}
                   >
-                    <span className="w-2 h-2 rounded-full" style={{ background: '#3b82f6' }} />
-                    {m.display_name}
-                    <span className="text-tertiary ml-auto">{(m.context_window / 1000).toFixed(0)}K</span>
+                    <span className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${m.provider === 'ollama' ? 'bg-success-500' : 'bg-electric-500'}`} />
+                      {m.display_name}
+                    </span>
+                    {m.description && <span className="text-tertiary pl-4 text-left">{m.description}</span>}
                   </button>
                 ))}
               </div>
@@ -447,9 +450,9 @@ export function ChatView() {
                         <button onClick={handleRegenerate} className="p-1 text-tertiary hover:text-secondary transition-colors" title="Regenerate">
                           <RefreshCw className="w-3.5 h-3.5" />
                         </button>
-                        {msg.model && (
-                          <span className="text-xs text-tertiary ml-auto">{msg.model}</span>
-                        )}
+                        <span className="text-xs text-tertiary ml-auto">
+                          {providerLabel(msg.provider)}
+                        </span>
                       </div>
                     )}
                   </div>

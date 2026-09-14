@@ -55,10 +55,10 @@ export type PermissionLevel = 'safe' | 'confirm' | 'high_risk';
 export type PermissionDecision = 'always_allow' | 'ask_every_time' | 'allow_once' | 'deny';
 
 /**
- * Hybrid AI architecture: cloud inference is routed by NOVA's backend
- * (OpenRouter primary, NVIDIA NIM fallback); local inference uses Ollama.
+ * Hybrid AI: cloud answers come from NOVA's own backend on the managed AI
+ * runtime; local answers run on the user's own machine via Ollama.
  */
-export type ProviderId = 'nova_cloud' | 'openrouter' | 'nvidia_nim' | 'ollama';
+export type ProviderId = 'nova_cloud' | 'ollama';
 
 export type ModelCapability =
   | 'general'
@@ -363,6 +363,7 @@ export interface ModelInfo {
   provider: ProviderId;
   name: string;
   display_name: string;
+  description?: string;
   capabilities: ModelCapability[];
   context_window: number;
   max_output: number;
