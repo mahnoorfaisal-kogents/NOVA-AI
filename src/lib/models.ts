@@ -1,27 +1,34 @@
-import type { ModelInfo, ModelCapability, ProviderId, PlanTier } from '@/types';
+import type { ModelInfo, ModelCapability, PlanTier } from '@/types';
 
+/**
+ * NOVA's user-facing modes. People choose an intent, not a model name.
+ * Cloud modes are answered by the managed AI runtime; local modes only ever
+ * run on the user's own machine.
+ */
 export const MODELS: ModelInfo[] = [
   {
-    id: 'nova-fast',
+    id: 'nova-auto',
     provider: 'nova_cloud',
-    name: 'nova-fast',
-    display_name: 'NOVA Fast',
-    capabilities: ['general', 'fast', 'structured_output'],
-    context_window: 8000,
-    max_output: 2000,
+    name: 'nova-auto',
+    display_name: 'Auto',
+    description: 'NOVA picks the best mode for each message.',
+    capabilities: ['general', 'reasoning', 'structured_output', 'multimodal'],
+    context_window: 32000,
+    max_output: 4000,
     cost_per_1k_input: null,
     cost_per_1k_output: null,
     available: true,
     min_plan: 'free',
   },
   {
-    id: 'nova-standard',
+    id: 'nova-fast',
     provider: 'nova_cloud',
-    name: 'nova-standard',
-    display_name: 'NOVA Standard',
-    capabilities: ['general', 'reasoning', 'structured_output'],
+    name: 'nova-fast',
+    display_name: 'Fast',
+    description: 'Quick answers for short, simple questions.',
+    capabilities: ['general', 'fast', 'structured_output'],
     context_window: 16000,
-    max_output: 4000,
+    max_output: 2000,
     cost_per_1k_input: null,
     cost_per_1k_output: null,
     available: true,
@@ -31,9 +38,10 @@ export const MODELS: ModelInfo[] = [
     id: 'nova-reasoning',
     provider: 'nova_cloud',
     name: 'nova-reasoning',
-    display_name: 'NOVA Reasoning',
+    display_name: 'Reasoning',
+    description: 'Careful, step-by-step thinking for harder problems.',
     capabilities: ['reasoning', 'general', 'long_context'],
-    context_window: 32000,
+    context_window: 64000,
     max_output: 8000,
     cost_per_1k_input: null,
     cost_per_1k_output: null,
@@ -44,7 +52,8 @@ export const MODELS: ModelInfo[] = [
     id: 'nova-coding',
     provider: 'nova_cloud',
     name: 'nova-coding',
-    display_name: 'NOVA Coding',
+    display_name: 'Coding',
+    description: 'Writing, reviewing and fixing code.',
     capabilities: ['coding', 'reasoning', 'structured_output'],
     context_window: 32000,
     max_output: 8000,
@@ -57,8 +66,9 @@ export const MODELS: ModelInfo[] = [
     id: 'nova-research',
     provider: 'nova_cloud',
     name: 'nova-research',
-    display_name: 'NOVA Research',
-    capabilities: ['reasoning', 'long_context', 'general'],
+    display_name: 'Research',
+    description: 'Longer, structured analysis of a topic.',
+    capabilities: ['reasoning', 'long_context', 'general', 'vision'],
     context_window: 64000,
     max_output: 8000,
     cost_per_1k_input: null,
@@ -67,50 +77,26 @@ export const MODELS: ModelInfo[] = [
     min_plan: 'pro',
   },
   {
-    id: 'nova-vision',
-    provider: 'nova_cloud',
-    name: 'nova-vision',
-    display_name: 'NOVA Vision',
-    capabilities: ['vision', 'multimodal', 'general'],
-    context_window: 16000,
+    id: 'nova-private',
+    provider: 'ollama',
+    name: 'nova-private',
+    display_name: 'Private (on this device)',
+    description: 'Answers are generated on your own machine. Nothing leaves it.',
+    capabilities: ['general', 'fast', 'reasoning'],
+    context_window: 8000,
     max_output: 4000,
     cost_per_1k_input: null,
     cost_per_1k_output: null,
     available: true,
-    min_plan: 'pro',
+    min_plan: 'free',
   },
   {
-    id: 'nova-long-context',
-    provider: 'nova_cloud',
-    name: 'nova-long-context',
-    display_name: 'NOVA Long Context',
-    capabilities: ['long_context', 'general', 'reasoning'],
-    context_window: 128000,
-    max_output: 8000,
-    cost_per_1k_input: null,
-    cost_per_1k_output: null,
-    available: true,
-    min_plan: 'ultimate',
-  },
-  {
-    id: 'nova-multimodal',
-    provider: 'nova_cloud',
-    name: 'nova-multimodal',
-    display_name: 'NOVA Multimodal',
-    capabilities: ['multimodal', 'vision', 'general', 'reasoning'],
-    context_window: 32000,
-    max_output: 8000,
-    cost_per_1k_input: null,
-    cost_per_1k_output: null,
-    available: true,
-    min_plan: 'ultimate',
-  },
-  {
-    id: 'nova-local',
+    id: 'nova-offline',
     provider: 'ollama',
-    name: 'nova-local',
-    display_name: 'NOVA Local (Ollama)',
-    capabilities: ['general', 'fast', 'reasoning'],
+    name: 'nova-offline',
+    display_name: 'Offline (on this device)',
+    description: 'Works without an internet connection for the AI part.',
+    capabilities: ['general', 'fast'],
     context_window: 8000,
     max_output: 4000,
     cost_per_1k_input: null,
@@ -141,25 +127,27 @@ export function hasCapability(model: ModelInfo, capability: ModelCapability): bo
   return model.capabilities.includes(capability);
 }
 
+export function isLocalModel(model: ModelInfo): boolean {
+  return model.provider === 'ollama';
+}
+
 export function getBestModelForTask(
   taskType: 'simple' | 'reasoning' | 'coding' | 'vision' | 'long_document' | 'multimodal',
   plan: PlanTier
 ): ModelInfo {
-  const available = getModelsForPlan(plan);
+  const available = getModelsForPlan(plan).filter((m) => m.provider === 'nova_cloud');
 
-  const capabilityMap: Record<string, ModelCapability[]> = {
-    simple: ['fast'],
-    reasoning: ['reasoning'],
-    coding: ['coding'],
-    vision: ['vision'],
-    long_document: ['long_context'],
-    multimodal: ['multimodal'],
+  const preferred: Record<string, string[]> = {
+    simple: ['nova-fast', 'nova-auto'],
+    reasoning: ['nova-reasoning', 'nova-auto'],
+    coding: ['nova-coding', 'nova-auto'],
+    vision: ['nova-auto'],
+    long_document: ['nova-research', 'nova-reasoning', 'nova-auto'],
+    multimodal: ['nova-auto'],
   };
 
-  const needed = capabilityMap[taskType] ?? ['general'];
-
-  for (const cap of needed) {
-    const match = available.find((m) => m.capabilities.includes(cap));
+  for (const id of preferred[taskType] ?? ['nova-auto']) {
+    const match = available.find((m) => m.id === id);
     if (match) return match;
   }
 
