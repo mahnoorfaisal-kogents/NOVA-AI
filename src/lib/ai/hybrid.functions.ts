@@ -87,8 +87,8 @@ export const novaCloudChat = createServerFn({ method: "POST" })
         body: JSON.stringify({
           model: upstreamModel,
           messages: data.messages,
-          temperature: data.temperature ?? 0.7,
-          max_tokens: data.maxTokens ?? 4000,
+          reasoning_effort: effort,
+          max_completion_tokens: data.maxTokens ?? 4000,
         }),
       });
 
