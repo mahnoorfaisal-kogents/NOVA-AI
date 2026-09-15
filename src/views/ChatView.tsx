@@ -6,8 +6,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { sendChat, providerLabel, type ChatMessage } from '@/lib/ai/providers';
-import { routeModel, classifyTaskType } from '@/lib/ai/router';
+import { providerLabel, type ChatMessage } from '@/lib/ai/providers';
+import { orchestrateChat, routeRequest } from '@/lib/ai/orchestrator';
 import { buildSystemPrompt } from '@/lib/ai/personality';
 import { getModelsForPlan } from '@/lib/models';
 import { getPlanLimits } from '@/lib/plans';
