@@ -37,7 +37,8 @@ export function ResearchView() {
     ];
     setSteps(researchSteps);
 
-    const model = routeModel('reasoning', profile?.plan ?? 'free').model;
+    // Research always runs in NOVA's Research mode.
+    const decision = routeRequest('nova-research', profile?.plan ?? 'free', query);
 
     for (let i = 0; i < researchSteps.length; i++) {
       setSteps((prev) => prev.map((s, idx) => idx === i ? { ...s, status: 'running' } : s));
