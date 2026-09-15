@@ -14,13 +14,16 @@ import { z } from "zod";
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
-/** NOVA's intent modes mapped onto managed runtime models. */
-const MODE_MODEL: Record<string, string> = {
-  "nova-auto": "google/gemini-3.8-flash",
-  "nova-fast": "google/gemini-3.1-flash-lite",
-  "nova-reasoning": "google/gemini-3.1-pro-preview",
-  "nova-coding": "google/gemini-3.8-flash",
-  "nova-research": "google/gemini-3.1-pro-preview",
+/** The managed runtime model NOVA's cloud modes are answered by. */
+const RUNTIME_MODEL = "openai/gpt-6-astra";
+
+/** How much thinking each NOVA mode gets. */
+const MODE_EFFORT: Record<string, "low" | "medium" | "high"> = {
+  "nova-auto": "medium",
+  "nova-fast": "low",
+  "nova-reasoning": "high",
+  "nova-coding": "medium",
+  "nova-research": "high",
 };
 
 const DEFAULT_MODE = "nova-auto";
