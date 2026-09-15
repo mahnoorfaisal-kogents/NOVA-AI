@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Globe, Loader2, AlertCircle, ExternalLink, FileText, Brain, FolderKanban, CheckCircle2 } from 'lucide-react';
+import { Search, Loader2, AlertCircle, FileText, Brain, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { type ChatMessage } from '@/lib/ai/providers';
