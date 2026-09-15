@@ -168,9 +168,8 @@ export function ChatView() {
 
     await supabase.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', convId);
 
-    const taskType = classifyTaskType(messageText);
-    const routing = routeModel(taskType, profile?.plan ?? 'free', selectedModel);
-    const model = routing.model;
+    const decision = routeRequest(selectedModel, profile?.plan ?? 'free', messageText);
+    const model = decision.model;
 
     const chatMessages: ChatMessage[] = [...messages, { role: 'user' as const, content: messageText }].map((m) => ({
       role: m.role as 'user' | 'assistant' | 'system',
