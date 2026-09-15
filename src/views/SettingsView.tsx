@@ -166,6 +166,7 @@ export function SettingsView() {
     { id: 'profile', label: 'Profile', icon: UserIcon },
     { id: 'appearance', label: 'Appearance', icon: Palette },
     { id: 'personality', label: 'Personality', icon: Brain },
+    { id: 'local-ai', label: 'Local AI', icon: Cpu },
     { id: 'privacy', label: 'Privacy', icon: Shield },
     { id: 'plans', label: 'Plans', icon: CreditCard },
     { id: 'export', label: 'Data Export', icon: Download },
