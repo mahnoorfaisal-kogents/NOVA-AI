@@ -197,7 +197,7 @@ export function ChatView() {
     setMessages((prev) => [...prev, assistantMessage]);
 
     abortRef.current = new AbortController();
-    const response = await sendChat(chatMessages, model, {
+    const response = await orchestrateChat(chatMessages, decision, {
       systemPrompt,
       signal: abortRef.current.signal,
     });
