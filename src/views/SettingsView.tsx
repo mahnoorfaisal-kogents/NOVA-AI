@@ -31,6 +31,53 @@ export function SettingsView() {
   const [conversationSaving, setConversationSaving] = useState(true);
   const [exporting, setExporting] = useState(false);
 
+  // Local AI (on this device)
+  const [localUrl, setLocalUrl] = useState(DEFAULT_OLLAMA_URL);
+  const [localModel, setLocalModel] = useState('');
+  const [localStatus, setLocalStatus] = useState<LocalStatus | null>(null);
+  const [checkingLocal, setCheckingLocal] = useState(false);
+  const [testingLocal, setTestingLocal] = useState(false);
+  const [localTest, setLocalTest] = useState<{ ok: boolean; message: string } | null>(null);
+
+  const detectLocal = useCallback(async (url?: string) => {
+    setCheckingLocal(true);
+    setLocalTest(null);
+    const status = await checkLocalAI(url ?? localUrl);
+    setLocalStatus(status);
+    setCheckingLocal(false);
+    return status;
+  }, [localUrl]);
+
+  useEffect(() => {
+    const saved = getOllamaSettings();
+    setLocalUrl(saved.baseUrl);
+    setLocalModel(saved.model);
+  }, []);
+
+  useEffect(() => {
+    if (tab === 'local-ai' && !localStatus && !checkingLocal) {
+      void detectLocal();
+    }
+  }, [tab, localStatus, checkingLocal, detectLocal]);
+
+  const saveLocalSettings = (baseUrl: string, model: string) => {
+    setLocalUrl(baseUrl);
+    setLocalModel(model);
+    setOllamaSettings({ baseUrl, model });
+  };
+
+  const handleTestLocalModel = async () => {
+    setTestingLocal(true);
+    setLocalTest(null);
+    const result = await testLocalModel(localUrl, localModel);
+    setLocalTest(
+      result.ok
+        ? { ok: true, message: `${localModel} replied "${result.reply}" in ${result.ms} ms. Local AI is working.` }
+        : { ok: false, message: result.error ?? 'The local model test failed.' },
+    );
+    setTestingLocal(false);
+  };
+
   useEffect(() => {
     setFullName(profile?.full_name ?? '');
   }, [profile]);
