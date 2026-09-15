@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Globe, Loader2, AlertCircle, ExternalLink, FileText, Brain, FolderKanban, CheckCircle2 } from 'lucide-react';
+import { Search, Loader2, AlertCircle, FileText, Brain, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { sendChat, type ChatMessage } from '@/lib/ai/providers';
+import { type ChatMessage } from '@/lib/ai/providers';
 import { buildSystemPrompt } from '@/lib/ai/personality';
-import { routeModel } from '@/lib/ai/router';
+import { orchestrateChat, routeRequest } from '@/lib/ai/orchestrator';
 import { MarkdownRenderer } from '@/components/chat/MarkdownRenderer';
 
 interface ResearchStep {
@@ -37,7 +37,8 @@ export function ResearchView() {
     ];
     setSteps(researchSteps);
 
-    const model = routeModel('reasoning', profile?.plan ?? 'free').model;
+    // Research always runs in NOVA's Research mode.
+    const decision = routeRequest('nova-research', profile?.plan ?? 'free', query);
 
     for (let i = 0; i < researchSteps.length; i++) {
       setSteps((prev) => prev.map((s, idx) => idx === i ? { ...s, status: 'running' } : s));
@@ -56,7 +57,7 @@ export function ResearchView() {
       });
 
       const messages: ChatMessage[] = [{ role: 'user', content: prompts[i] }];
-      const response = await sendChat(messages, model, { systemPrompt });
+      const response = await orchestrateChat(messages, decision, { systemPrompt });
 
       if (response.error && i === 0) {
         setSteps((prev) => prev.map((s, idx) => idx === i ? { ...s, status: 'error', result: response.error ?? 'Unknown error' } : s));
@@ -89,7 +90,13 @@ export function ResearchView() {
       <h1 className="text-2xl font-bold text-primary mb-1 flex items-center gap-2">
         <Search className="w-6 h-6 text-electric-400" /> Research
       </h1>
-      <p className="text-sm text-secondary mb-6">Deep research workflow with structured analysis and reporting</p>
+      <p className="text-sm text-secondary mb-6">
+        Multi-step analysis in NOVA's Research mode, with a structured written report at the end.
+      </p>
+      <p className="text-xs text-tertiary -mt-4 mb-6">
+        Research works from what NOVA already knows — it does not browse the live web, and it will
+        never invent sources.
+      </p>
 
       <form onSubmit={runResearch} className="mb-6">
         <div className="flex gap-2">

@@ -6,8 +6,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { sendChat, providerLabel, type ChatMessage } from '@/lib/ai/providers';
-import { routeModel, classifyTaskType } from '@/lib/ai/router';
+import { providerLabel, type ChatMessage } from '@/lib/ai/providers';
+import { orchestrateChat, routeRequest } from '@/lib/ai/orchestrator';
 import { buildSystemPrompt } from '@/lib/ai/personality';
 import { getModelsForPlan } from '@/lib/models';
 import { getPlanLimits } from '@/lib/plans';
@@ -168,9 +168,8 @@ export function ChatView() {
 
     await supabase.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', convId);
 
-    const taskType = classifyTaskType(messageText);
-    const routing = routeModel(taskType, profile?.plan ?? 'free', selectedModel);
-    const model = routing.model;
+    const decision = routeRequest(selectedModel, profile?.plan ?? 'free', messageText);
+    const model = decision.model;
 
     const chatMessages: ChatMessage[] = [...messages, { role: 'user' as const, content: messageText }].map((m) => ({
       role: m.role as 'user' | 'assistant' | 'system',
@@ -198,7 +197,7 @@ export function ChatView() {
     setMessages((prev) => [...prev, assistantMessage]);
 
     abortRef.current = new AbortController();
-    const response = await sendChat(chatMessages, model, {
+    const response = await orchestrateChat(chatMessages, decision, {
       systemPrompt,
       signal: abortRef.current.signal,
     });

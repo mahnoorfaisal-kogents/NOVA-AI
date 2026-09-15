@@ -14,13 +14,16 @@ import { z } from "zod";
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
-/** NOVA's intent modes mapped onto managed runtime models. */
-const MODE_MODEL: Record<string, string> = {
-  "nova-auto": "google/gemini-3.8-flash",
-  "nova-fast": "google/gemini-3.1-flash-lite",
-  "nova-reasoning": "google/gemini-3.1-pro-preview",
-  "nova-coding": "google/gemini-3.8-flash",
-  "nova-research": "google/gemini-3.1-pro-preview",
+/** The managed runtime model NOVA's cloud modes are answered by. */
+const RUNTIME_MODEL = "openai/gpt-6-astra";
+
+/** How much thinking each NOVA mode gets. */
+const MODE_EFFORT: Record<string, "low" | "medium" | "high"> = {
+  "nova-auto": "medium",
+  "nova-fast": "low",
+  "nova-reasoning": "high",
+  "nova-coding": "medium",
+  "nova-research": "high",
 };
 
 const DEFAULT_MODE = "nova-auto";
@@ -70,7 +73,8 @@ export const novaCloudChat = createServerFn({ method: "POST" })
       return { ...empty, error: "NOVA's AI runtime is not available in this environment." };
     }
 
-    const upstreamModel = MODE_MODEL[data.model] ?? MODE_MODEL[DEFAULT_MODE]!;
+    const upstreamModel = RUNTIME_MODEL;
+    const effort = MODE_EFFORT[data.model] ?? MODE_EFFORT[DEFAULT_MODE]!;
 
     try {
       const response = await fetch(GATEWAY_URL, {
@@ -83,8 +87,8 @@ export const novaCloudChat = createServerFn({ method: "POST" })
         body: JSON.stringify({
           model: upstreamModel,
           messages: data.messages,
-          temperature: data.temperature ?? 0.7,
-          max_tokens: data.maxTokens ?? 4000,
+          reasoning_effort: effort,
+          max_completion_tokens: data.maxTokens ?? 4000,
         }),
       });
 

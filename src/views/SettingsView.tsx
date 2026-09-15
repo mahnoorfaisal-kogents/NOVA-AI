@@ -1,13 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Settings as SettingsIcon, User as UserIcon, Palette, Brain, Bell, Shield, Download, Trash2, CreditCard, Globe, Zap } from 'lucide-react';
+import { Settings as SettingsIcon, User as UserIcon, Palette, Brain, Shield, Download, Trash2, CreditCard, Cpu, CheckCircle2, AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
 import { PLANS } from '@/lib/plans';
-import type { PlanTier, PersonalityType } from '@/types';
+import type { PersonalityType } from '@/types';
 import { PERSONALITIES } from '@/lib/ai/personality';
+import {
+  checkLocalAI,
+  getOllamaSettings,
+  setOllamaSettings,
+  DEFAULT_OLLAMA_URL,
+  type LocalStatus,
+} from '@/lib/ai/providers';
+import { testLocalModel } from '@/lib/ai/orchestrator';
 
-type Tab = 'profile' | 'appearance' | 'personality' | 'privacy' | 'plans' | 'export';
+type Tab = 'profile' | 'appearance' | 'personality' | 'local-ai' | 'privacy' | 'plans' | 'export';
 
 export function SettingsView() {
   const { user, profile, updateProfile, signOut } = useAuth();
@@ -22,6 +30,53 @@ export function SettingsView() {
   const [autoMemoryEnabled, setAutoMemoryEnabled] = useState(true);
   const [conversationSaving, setConversationSaving] = useState(true);
   const [exporting, setExporting] = useState(false);
+
+  // Local AI (on this device)
+  const [localUrl, setLocalUrl] = useState(DEFAULT_OLLAMA_URL);
+  const [localModel, setLocalModel] = useState('');
+  const [localStatus, setLocalStatus] = useState<LocalStatus | null>(null);
+  const [checkingLocal, setCheckingLocal] = useState(false);
+  const [testingLocal, setTestingLocal] = useState(false);
+  const [localTest, setLocalTest] = useState<{ ok: boolean; message: string } | null>(null);
+
+  const detectLocal = useCallback(async (url?: string) => {
+    setCheckingLocal(true);
+    setLocalTest(null);
+    const status = await checkLocalAI(url ?? localUrl);
+    setLocalStatus(status);
+    setCheckingLocal(false);
+    return status;
+  }, [localUrl]);
+
+  useEffect(() => {
+    const saved = getOllamaSettings();
+    setLocalUrl(saved.baseUrl);
+    setLocalModel(saved.model);
+  }, []);
+
+  useEffect(() => {
+    if (tab === 'local-ai' && !localStatus && !checkingLocal) {
+      void detectLocal();
+    }
+  }, [tab, localStatus, checkingLocal, detectLocal]);
+
+  const saveLocalSettings = (baseUrl: string, model: string) => {
+    setLocalUrl(baseUrl);
+    setLocalModel(model);
+    setOllamaSettings({ baseUrl, model });
+  };
+
+  const handleTestLocalModel = async () => {
+    setTestingLocal(true);
+    setLocalTest(null);
+    const result = await testLocalModel(localUrl, localModel);
+    setLocalTest(
+      result.ok
+        ? { ok: true, message: `${localModel} replied "${result.reply}" in ${result.ms} ms. Local AI is working.` }
+        : { ok: false, message: result.error ?? 'The local model test failed.' },
+    );
+    setTestingLocal(false);
+  };
 
   useEffect(() => {
     setFullName(profile?.full_name ?? '');
@@ -111,6 +166,7 @@ export function SettingsView() {
     { id: 'profile', label: 'Profile', icon: UserIcon },
     { id: 'appearance', label: 'Appearance', icon: Palette },
     { id: 'personality', label: 'Personality', icon: Brain },
+    { id: 'local-ai', label: 'Local AI', icon: Cpu },
     { id: 'privacy', label: 'Privacy', icon: Shield },
     { id: 'plans', label: 'Plans', icon: CreditCard },
     { id: 'export', label: 'Data Export', icon: Download },
@@ -224,6 +280,124 @@ export function SettingsView() {
               />
             </div>
           )}
+        </div>
+      )}
+
+      {tab === 'local-ai' && (
+        <div className="glass-strong rounded-xl p-6 space-y-5">
+          <div>
+            <h3 className="font-medium text-primary text-sm flex items-center gap-2">
+              <Cpu className="w-4 h-4 text-electric-400" /> Local AI (on this device)
+            </h3>
+            <p className="text-xs text-secondary mt-1">
+              NOVA can answer on your own machine using Ollama. Private and Offline modes always use
+              this — nothing is ever sent to the cloud in those modes. NOVA never downloads a model
+              for you; install the ones you want with Ollama first.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-secondary mb-1.5">Address on this machine</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={localUrl}
+                onChange={(e) => setLocalUrl(e.target.value)}
+                onBlur={() => saveLocalSettings(localUrl, localModel)}
+                placeholder={DEFAULT_OLLAMA_URL}
+                className="flex-1 px-3 py-2 bg-tertiary border border-subtle rounded-lg text-primary placeholder:text-tertiary focus:outline-none focus:border-electric-500 text-sm"
+              />
+              <button
+                onClick={() => { saveLocalSettings(localUrl, localModel); void detectLocal(localUrl); }}
+                disabled={checkingLocal}
+                className="flex items-center gap-2 px-3 py-2 bg-tertiary border border-subtle rounded-lg text-sm text-secondary hover:text-primary disabled:opacity-50"
+              >
+                {checkingLocal ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                {checkingLocal ? 'Checking...' : 'Check'}
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-tertiary/50">
+            {checkingLocal ? (
+              <>
+                <Loader2 className="w-4 h-4 text-electric-400 animate-spin mt-0.5" />
+                <p className="text-xs text-secondary">Looking for local AI on this machine...</p>
+              </>
+            ) : localStatus?.reachable ? (
+              <>
+                <CheckCircle2 className="w-4 h-4 text-success-400 mt-0.5" />
+                <p className="text-xs text-secondary">
+                  Local AI found. {localStatus.models.length}{' '}
+                  {localStatus.models.length === 1 ? 'model is' : 'models are'} installed.
+                  {localStatus.models.length === 0 && ' Install one with Ollama to use Private and Offline modes.'}
+                </p>
+              </>
+            ) : (
+              <>
+                <AlertCircle className="w-4 h-4 text-warning-400 mt-0.5" />
+                <p className="text-xs text-secondary">
+                  {localStatus?.error ?? 'Local AI has not been checked yet.'} Private and Offline modes
+                  stay unavailable until it is running — NOVA will not use the cloud instead.
+                </p>
+              </>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-secondary mb-1.5">Model for local answers</label>
+            {localStatus?.reachable && localStatus.models.length > 0 ? (
+              <select
+                value={localModel}
+                onChange={(e) => { saveLocalSettings(localUrl, e.target.value); setLocalTest(null); }}
+                className="w-full px-3 py-2 bg-tertiary border border-subtle rounded-lg text-primary focus:outline-none focus:border-electric-500 text-sm"
+              >
+                <option value="">Select an installed model</option>
+                {localStatus.models.map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={localModel}
+                onChange={(e) => setLocalModel(e.target.value)}
+                onBlur={() => saveLocalSettings(localUrl, localModel)}
+                placeholder="e.g. llama3.1"
+                className="w-full px-3 py-2 bg-tertiary border border-subtle rounded-lg text-primary placeholder:text-tertiary focus:outline-none focus:border-electric-500 text-sm"
+              />
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleTestLocalModel}
+              disabled={testingLocal || !localModel}
+              className="flex items-center gap-2 px-4 py-2 nova-gradient text-white rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50"
+            >
+              {testingLocal ? <Loader2 className="w-4 h-4 animate-spin" /> : <Cpu className="w-4 h-4" />}
+              {testingLocal ? 'Testing...' : 'Test this model'}
+            </button>
+            <span className="text-xs text-tertiary">Asks the model for a one-word reply. Stays on this device.</span>
+          </div>
+
+          {localTest && (
+            <div className={`flex items-start gap-2 p-3 rounded-lg border ${
+              localTest.ok
+                ? 'bg-success-500/10 border-success-500/30'
+                : 'bg-error-500/10 border-error-500/30'
+            }`}>
+              {localTest.ok
+                ? <CheckCircle2 className="w-4 h-4 text-success-400 mt-0.5" />
+                : <AlertCircle className="w-4 h-4 text-error-400 mt-0.5" />}
+              <p className={`text-xs ${localTest.ok ? 'text-success-400' : 'text-error-400'}`}>{localTest.message}</p>
+            </div>
+          )}
+
+          <p className="text-xs text-tertiary border-t border-subtle pt-4">
+            NOVA has no API keys or AI providers to configure. Cloud answers use NOVA's own managed AI
+            runtime, and its credentials never reach your browser.
+          </p>
         </div>
       )}
 
