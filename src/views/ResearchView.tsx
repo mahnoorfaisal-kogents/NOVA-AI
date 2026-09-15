@@ -57,7 +57,7 @@ export function ResearchView() {
       });
 
       const messages: ChatMessage[] = [{ role: 'user', content: prompts[i] }];
-      const response = await sendChat(messages, model, { systemPrompt });
+      const response = await orchestrateChat(messages, decision, { systemPrompt });
 
       if (response.error && i === 0) {
         setSteps((prev) => prev.map((s, idx) => idx === i ? { ...s, status: 'error', result: response.error ?? 'Unknown error' } : s));
