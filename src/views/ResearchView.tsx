@@ -90,7 +90,13 @@ export function ResearchView() {
       <h1 className="text-2xl font-bold text-primary mb-1 flex items-center gap-2">
         <Search className="w-6 h-6 text-electric-400" /> Research
       </h1>
-      <p className="text-sm text-secondary mb-6">Deep research workflow with structured analysis and reporting</p>
+      <p className="text-sm text-secondary mb-6">
+        Multi-step analysis in NOVA's Research mode, with a structured written report at the end.
+      </p>
+      <p className="text-xs text-tertiary -mt-4 mb-6">
+        Research works from what NOVA already knows — it does not browse the live web, and it will
+        never invent sources.
+      </p>
 
       <form onSubmit={runResearch} className="mb-6">
         <div className="flex gap-2">
