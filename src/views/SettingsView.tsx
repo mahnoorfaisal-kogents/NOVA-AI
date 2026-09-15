@@ -1,13 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Settings as SettingsIcon, User as UserIcon, Palette, Brain, Bell, Shield, Download, Trash2, CreditCard, Globe, Zap } from 'lucide-react';
+import { Settings as SettingsIcon, User as UserIcon, Palette, Brain, Shield, Download, Trash2, CreditCard, Cpu, CheckCircle2, AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
 import { PLANS } from '@/lib/plans';
-import type { PlanTier, PersonalityType } from '@/types';
+import type { PersonalityType } from '@/types';
 import { PERSONALITIES } from '@/lib/ai/personality';
+import {
+  checkLocalAI,
+  getOllamaSettings,
+  setOllamaSettings,
+  DEFAULT_OLLAMA_URL,
+  type LocalStatus,
+} from '@/lib/ai/providers';
+import { testLocalModel } from '@/lib/ai/orchestrator';
 
-type Tab = 'profile' | 'appearance' | 'personality' | 'privacy' | 'plans' | 'export';
+type Tab = 'profile' | 'appearance' | 'personality' | 'local-ai' | 'privacy' | 'plans' | 'export';
 
 export function SettingsView() {
   const { user, profile, updateProfile, signOut } = useAuth();
