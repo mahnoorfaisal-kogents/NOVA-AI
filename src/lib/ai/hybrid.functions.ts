@@ -73,7 +73,8 @@ export const novaCloudChat = createServerFn({ method: "POST" })
       return { ...empty, error: "NOVA's AI runtime is not available in this environment." };
     }
 
-    const upstreamModel = MODE_MODEL[data.model] ?? MODE_MODEL[DEFAULT_MODE]!;
+    const upstreamModel = RUNTIME_MODEL;
+    const effort = MODE_EFFORT[data.model] ?? MODE_EFFORT[DEFAULT_MODE]!;
 
     try {
       const response = await fetch(GATEWAY_URL, {
