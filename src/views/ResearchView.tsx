@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { Search, Globe, Loader2, AlertCircle, ExternalLink, FileText, Brain, FolderKanban, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { sendChat, type ChatMessage } from '@/lib/ai/providers';
+import { type ChatMessage } from '@/lib/ai/providers';
 import { buildSystemPrompt } from '@/lib/ai/personality';
-import { routeModel } from '@/lib/ai/router';
+import { orchestrateChat, routeRequest } from '@/lib/ai/orchestrator';
 import { MarkdownRenderer } from '@/components/chat/MarkdownRenderer';
 
 interface ResearchStep {
