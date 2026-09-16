@@ -13,7 +13,12 @@ import {
   DEFAULT_OLLAMA_URL,
   type LocalStatus,
 } from '@/lib/ai/providers';
-import { testLocalModel } from '@/lib/ai/orchestrator';
+import {
+  testLocalModel,
+  localTroubleshooting,
+  runModeCheck,
+  type ModeTestResult,
+} from '@/lib/ai/orchestrator';
 
 type Tab = 'profile' | 'appearance' | 'personality' | 'local-ai' | 'privacy' | 'plans' | 'export';
 
