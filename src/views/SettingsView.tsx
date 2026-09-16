@@ -359,6 +359,23 @@ export function SettingsView() {
             )}
           </div>
 
+          {(() => {
+            const help = checkingLocal ? null : localTroubleshooting(localStatus, localUrl, localModel);
+            if (!help) return null;
+            return (
+              <div className="p-3 rounded-lg border border-warning-500/30 bg-warning-500/10">
+                <p className="text-xs font-medium text-warning-400 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" /> {help.headline}
+                </p>
+                <ol className="mt-2 ml-6 space-y-1 list-decimal">
+                  {help.steps.map((step) => (
+                    <li key={step} className="text-xs text-secondary">{step}</li>
+                  ))}
+                </ol>
+              </div>
+            );
+          })()}
+
           <div>
             <label className="block text-sm font-medium text-secondary mb-1.5">Model for local answers</label>
             {localStatus?.reachable && localStatus.models.length > 0 ? (
