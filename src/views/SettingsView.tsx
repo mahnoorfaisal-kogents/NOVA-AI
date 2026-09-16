@@ -43,6 +43,16 @@ export function SettingsView() {
   const [checkingLocal, setCheckingLocal] = useState(false);
   const [testingLocal, setTestingLocal] = useState(false);
   const [localTest, setLocalTest] = useState<{ ok: boolean; message: string } | null>(null);
+  const [modeResults, setModeResults] = useState<ModeTestResult[] | null>(null);
+  const [checkingModes, setCheckingModes] = useState(false);
+
+  const handleModeCheck = async () => {
+    setCheckingModes(true);
+    setModeResults(null);
+    const results = await runModeCheck(profile?.plan ?? 'free');
+    setModeResults(results);
+    setCheckingModes(false);
+  };
 
   const detectLocal = useCallback(async (url?: string) => {
     setCheckingLocal(true);
