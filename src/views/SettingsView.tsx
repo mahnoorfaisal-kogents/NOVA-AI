@@ -426,6 +426,51 @@ export function SettingsView() {
             </div>
           )}
 
+          <div className="border-t border-subtle pt-4 space-y-3">
+            <div>
+              <h4 className="text-sm font-medium text-primary">Check every mode</h4>
+              <p className="text-xs text-secondary mt-1">
+                Sends one very short message through Auto, Fast, Reasoning, Coding, Research, Private
+                and Offline, then shows where each one ran and how long it took. Private and Offline
+                are only tried on this device.
+              </p>
+            </div>
+            <button
+              onClick={handleModeCheck}
+              disabled={checkingModes}
+              className="flex items-center gap-2 px-4 py-2 bg-tertiary border border-subtle rounded-lg text-sm text-secondary hover:text-primary disabled:opacity-50"
+            >
+              {checkingModes ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              {checkingModes ? 'Checking all modes...' : 'Run mode check'}
+            </button>
+
+            {modeResults && (
+              <div className="space-y-1.5">
+                {modeResults.map((r) => (
+                  <div
+                    key={r.mode}
+                    className={`flex items-start gap-2 p-2.5 rounded-lg border ${
+                      r.ok ? 'bg-success-500/10 border-success-500/30' : 'bg-error-500/10 border-error-500/30'
+                    }`}
+                  >
+                    {r.ok
+                      ? <CheckCircle2 className="w-4 h-4 text-success-400 mt-0.5 shrink-0" />
+                      : <AlertCircle className="w-4 h-4 text-error-400 mt-0.5 shrink-0" />}
+                    <div className="min-w-0">
+                      <p className="text-xs text-primary">
+                        <span className="font-medium">{r.label}</span>
+                        <span className="text-tertiary"> · {r.source} · {r.ms} ms</span>
+                      </p>
+                      <p className={`text-xs mt-0.5 break-words ${r.ok ? 'text-secondary' : 'text-error-400'}`}>
+                        {r.ok ? `Replied "${r.reply}"` : r.error}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <p className="text-xs text-tertiary border-t border-subtle pt-4">
             NOVA has no API keys or AI providers to configure. Cloud answers use NOVA's own managed AI
             runtime, and its credentials never reach your browser.
