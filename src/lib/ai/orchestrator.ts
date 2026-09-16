@@ -272,6 +272,21 @@ export async function runModeCheck(
   const results: ModeTestResult[] = [];
 
   for (const mode of modes) {
+    const requested = getModelById(mode);
+    const included = getModelsForPlan(plan).some((m) => m.id === mode);
+    if (requested && mode !== 'nova-auto' && !included) {
+      results.push({
+        mode,
+        label: requested.display_name,
+        source: requested.provider === 'ollama' ? 'On this device' : 'NOVA Cloud',
+        ok: false,
+        ms: 0,
+        reply: '',
+        error: 'Not included in your current plan, so this mode was not tested.',
+      });
+      continue;
+    }
+
     const decision = routeRequest(mode, plan, prompt);
     const started = Date.now();
     const response = await orchestrateChat(
