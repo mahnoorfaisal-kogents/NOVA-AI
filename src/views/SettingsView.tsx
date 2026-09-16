@@ -13,7 +13,12 @@ import {
   DEFAULT_OLLAMA_URL,
   type LocalStatus,
 } from '@/lib/ai/providers';
-import { testLocalModel } from '@/lib/ai/orchestrator';
+import {
+  testLocalModel,
+  localTroubleshooting,
+  runModeCheck,
+  type ModeTestResult,
+} from '@/lib/ai/orchestrator';
 
 type Tab = 'profile' | 'appearance' | 'personality' | 'local-ai' | 'privacy' | 'plans' | 'export';
 
@@ -38,6 +43,16 @@ export function SettingsView() {
   const [checkingLocal, setCheckingLocal] = useState(false);
   const [testingLocal, setTestingLocal] = useState(false);
   const [localTest, setLocalTest] = useState<{ ok: boolean; message: string } | null>(null);
+  const [modeResults, setModeResults] = useState<ModeTestResult[] | null>(null);
+  const [checkingModes, setCheckingModes] = useState(false);
+
+  const handleModeCheck = async () => {
+    setCheckingModes(true);
+    setModeResults(null);
+    const results = await runModeCheck(profile?.plan ?? 'free');
+    setModeResults(results);
+    setCheckingModes(false);
+  };
 
   const detectLocal = useCallback(async (url?: string) => {
     setCheckingLocal(true);
@@ -344,6 +359,23 @@ export function SettingsView() {
             )}
           </div>
 
+          {(() => {
+            const help = checkingLocal ? null : localTroubleshooting(localStatus, localUrl, localModel);
+            if (!help) return null;
+            return (
+              <div className="p-3 rounded-lg border border-warning-500/30 bg-warning-500/10">
+                <p className="text-xs font-medium text-warning-400 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" /> {help.headline}
+                </p>
+                <ol className="mt-2 ml-6 space-y-1 list-decimal">
+                  {help.steps.map((step) => (
+                    <li key={step} className="text-xs text-secondary">{step}</li>
+                  ))}
+                </ol>
+              </div>
+            );
+          })()}
+
           <div>
             <label className="block text-sm font-medium text-secondary mb-1.5">Model for local answers</label>
             {localStatus?.reachable && localStatus.models.length > 0 ? (
@@ -393,6 +425,51 @@ export function SettingsView() {
               <p className={`text-xs ${localTest.ok ? 'text-success-400' : 'text-error-400'}`}>{localTest.message}</p>
             </div>
           )}
+
+          <div className="border-t border-subtle pt-4 space-y-3">
+            <div>
+              <h4 className="text-sm font-medium text-primary">Check every mode</h4>
+              <p className="text-xs text-secondary mt-1">
+                Sends one very short message through Auto, Fast, Reasoning, Coding, Research, Private
+                and Offline, then shows where each one ran and how long it took. Private and Offline
+                are only tried on this device.
+              </p>
+            </div>
+            <button
+              onClick={handleModeCheck}
+              disabled={checkingModes}
+              className="flex items-center gap-2 px-4 py-2 bg-tertiary border border-subtle rounded-lg text-sm text-secondary hover:text-primary disabled:opacity-50"
+            >
+              {checkingModes ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              {checkingModes ? 'Checking all modes...' : 'Run mode check'}
+            </button>
+
+            {modeResults && (
+              <div className="space-y-1.5">
+                {modeResults.map((r) => (
+                  <div
+                    key={r.mode}
+                    className={`flex items-start gap-2 p-2.5 rounded-lg border ${
+                      r.ok ? 'bg-success-500/10 border-success-500/30' : 'bg-error-500/10 border-error-500/30'
+                    }`}
+                  >
+                    {r.ok
+                      ? <CheckCircle2 className="w-4 h-4 text-success-400 mt-0.5 shrink-0" />
+                      : <AlertCircle className="w-4 h-4 text-error-400 mt-0.5 shrink-0" />}
+                    <div className="min-w-0">
+                      <p className="text-xs text-primary">
+                        <span className="font-medium">{r.label}</span>
+                        <span className="text-tertiary"> · {r.source} · {r.ms} ms</span>
+                      </p>
+                      <p className={`text-xs mt-0.5 break-words ${r.ok ? 'text-secondary' : 'text-error-400'}`}>
+                        {r.ok ? `Replied "${r.reply}"` : r.error}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           <p className="text-xs text-tertiary border-t border-subtle pt-4">
             NOVA has no API keys or AI providers to configure. Cloud answers use NOVA's own managed AI

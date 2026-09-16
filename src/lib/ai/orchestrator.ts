@@ -16,9 +16,11 @@ import {
   checkLocalAI,
   getOllamaSettings,
   getProvider,
+  DEFAULT_OLLAMA_URL,
   type AIResponse,
   type ChatMessage,
   type ChatOptions,
+  type LocalStatus,
 } from '@/lib/ai/providers';
 
 export const NOVA_MODES = [
@@ -185,4 +187,125 @@ export async function testLocalModel(
     return { ok: false, reply: '', error: 'The local model answered with nothing.', ms: Date.now() - started };
   }
   return { ok: true, reply, error: null, ms: Date.now() - started };
+}
+
+/**
+ * Plain-language next steps when local AI cannot answer. Returned as a short
+ * list so the UI can show them as an ordered checklist.
+ */
+export function localTroubleshooting(
+  status: LocalStatus | null,
+  baseUrl: string,
+  selectedModel: string,
+): { headline: string; steps: string[] } | null {
+  if (!status) return null;
+
+  if (!status.reachable) {
+    return {
+      headline: `NOVA could not reach local AI at ${baseUrl}.`,
+      steps: [
+        'Install Ollama on this computer from ollama.com if you have not already.',
+        'Start it, then check that it is running (a small Ollama icon appears in your menu bar or system tray).',
+        `Confirm the address above matches where Ollama listens — the usual one is ${DEFAULT_OLLAMA_URL}.`,
+        'If you changed the port or run Ollama on another machine, put that full address in the field above.',
+        'Press Check again. Private and Offline modes stay unavailable until this succeeds — NOVA will not use the cloud instead.',
+      ],
+    };
+  }
+
+  if (status.models.length === 0) {
+    return {
+      headline: 'Local AI is running, but no models are installed on this machine.',
+      steps: [
+        'Open a terminal on this computer.',
+        'Install a model yourself, for example: ollama pull llama3.1',
+        'Press Check again, then pick the model in the list above.',
+      ],
+    };
+  }
+
+  if (selectedModel && !status.models.includes(selectedModel)) {
+    return {
+      headline: `"${selectedModel}" is not installed on this machine.`,
+      steps: [
+        `Pick one of the installed models instead: ${status.models.slice(0, 5).join(', ')}.`,
+        `Or install it yourself with: ollama pull ${selectedModel}`,
+        'Press Check again after installing.',
+      ],
+    };
+  }
+
+  if (!selectedModel) {
+    return {
+      headline: 'Pick a model for local answers.',
+      steps: [
+        'Choose one of the installed models above.',
+        'Then press "Test this model" to confirm it can reply.',
+      ],
+    };
+  }
+
+  return null;
+}
+
+export interface ModeTestResult {
+  mode: NovaMode;
+  label: string;
+  /** Where the answer came from, or would have come from. */
+  source: 'NOVA Cloud' | 'On this device';
+  ok: boolean;
+  ms: number;
+  reply: string;
+  error: string | null;
+}
+
+/**
+ * One-click check of every mode: sends one very short prompt through each and
+ * reports where it ran, how long it took, and what went wrong.
+ * Local modes are still hard-gated — a failure here never falls back to cloud.
+ */
+export async function runModeCheck(
+  plan: PlanTier,
+  modes: readonly NovaMode[] = NOVA_MODES,
+): Promise<ModeTestResult[]> {
+  const prompt = 'Reply with exactly: OK';
+  const results: ModeTestResult[] = [];
+
+  for (const mode of modes) {
+    const requested = getModelById(mode);
+    const included = getModelsForPlan(plan).some((m) => m.id === mode);
+    if (requested && mode !== 'nova-auto' && !included) {
+      results.push({
+        mode,
+        label: requested.display_name,
+        source: requested.provider === 'ollama' ? 'On this device' : 'NOVA Cloud',
+        ok: false,
+        ms: 0,
+        reply: '',
+        error: 'Not included in your current plan, so this mode was not tested.',
+      });
+      continue;
+    }
+
+    const decision = routeRequest(mode, plan, prompt);
+    const started = Date.now();
+    const response = await orchestrateChat(
+      [{ role: 'user', content: prompt }],
+      decision,
+      { systemPrompt: 'You are a connection test. Answer in one short word.', maxTokens: 20 },
+    );
+    const ms = Date.now() - started;
+    const reply = response.content.trim();
+    results.push({
+      mode,
+      label: decision.model.display_name,
+      source: decision.localOnly || response.provider === 'ollama' ? 'On this device' : 'NOVA Cloud',
+      ok: !response.error && reply.length > 0,
+      ms,
+      reply,
+      error: response.error ?? (reply ? null : 'This mode answered with nothing.'),
+    });
+  }
+
+  return results;
 }
