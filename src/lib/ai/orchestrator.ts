@@ -16,9 +16,11 @@ import {
   checkLocalAI,
   getOllamaSettings,
   getProvider,
+  DEFAULT_OLLAMA_URL,
   type AIResponse,
   type ChatMessage,
   type ChatOptions,
+  type LocalStatus,
 } from '@/lib/ai/providers';
 
 export const NOVA_MODES = [
