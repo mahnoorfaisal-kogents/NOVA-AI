@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Settings as SettingsIcon, User as UserIcon, Palette, Brain, Shield, Download, Trash2, CreditCard, Cpu, CheckCircle2, AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
+import { Settings as SettingsIcon, User as UserIcon, Palette, Brain, Shield, Download, Trash2, CreditCard, Cpu, CheckCircle2, AlertCircle, RefreshCw, Loader2, ClipboardCopy } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
