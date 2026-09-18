@@ -44,15 +44,74 @@ export function SettingsView() {
   const [testingLocal, setTestingLocal] = useState(false);
   const [localTest, setLocalTest] = useState<{ ok: boolean; message: string } | null>(null);
   const [modeResults, setModeResults] = useState<ModeTestResult[] | null>(null);
+  const [modeResultsAt, setModeResultsAt] = useState<string | null>(null);
   const [checkingModes, setCheckingModes] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  const [retryNote, setRetryNote] = useState<string | null>(null);
+
+  const storeResults = (results: ModeTestResult[]) => {
+    const at = new Date().toISOString();
+    setModeResults(results);
+    setModeResultsAt(at);
+    try {
+      window.localStorage.setItem(MODE_RESULTS_KEY, JSON.stringify({ at, results }));
+    } catch { /* storage unavailable */ }
+  };
 
   const handleModeCheck = async () => {
     setCheckingModes(true);
-    setModeResults(null);
     const results = await runModeCheck(profile?.plan ?? 'free');
-    setModeResults(results);
+    storeResults(results);
     setCheckingModes(false);
   };
+
+  const handleCopyReport = async () => {
+    if (!modeResults) return;
+    try {
+      await navigator.clipboard.writeText(formatModeReport(modeResults, modeResultsAt ?? undefined));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  /**
+   * Guided retry: keeps checking for local AI, and as soon as it answers,
+   * re-runs only the local modes that failed last time.
+   */
+  const startGuidedRetry = async () => {
+    setRetrying(true);
+    setRetryNote('Waiting for local AI to answer...');
+    for (let attempt = 1; attempt <= 20; attempt++) {
+      const status = await checkLocalAI(localUrl);
+      setLocalStatus(status);
+      if (status.reachable) {
+        const failedLocal = (modeResults ?? [])
+          .filter((r) => !r.ok && r.source === 'On this device')
+          .map((r) => r.mode);
+        if (failedLocal.length === 0) {
+          setRetryNote('Local AI is reachable again.');
+        } else {
+          setRetryNote('Local AI is back — re-running the local modes that failed...');
+          const rerun = await runModeCheck(profile?.plan ?? 'free', failedLocal);
+          const merged = (modeResults ?? []).map(
+            (r) => rerun.find((n) => n.mode === r.mode) ?? r,
+          );
+          storeResults(merged);
+          setRetryNote('Local AI is back and the failing local modes were re-tested.');
+        }
+        setRetrying(false);
+        return;
+      }
+      setRetryNote(`Still no answer from ${localUrl} (attempt ${attempt} of 20). Restart Ollama and confirm the port above.`);
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+    }
+    setRetrying(false);
+    setRetryNote(`Gave up after 20 tries. Local AI at ${localUrl} never answered — start Ollama, then press Retry again.`);
+  };
+
 
   const detectLocal = useCallback(async (url?: string) => {
     setCheckingLocal(true);
