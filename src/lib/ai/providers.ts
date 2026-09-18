@@ -81,6 +81,107 @@ export async function checkLocalAI(baseUrl?: string): Promise<LocalStatus> {
   }
 }
 
+/** Models Ollama publishes that are small enough for most laptops. */
+export const SUGGESTED_LOCAL_MODELS = [
+  { name: 'llama3.2:3b', size: '~2 GB', note: 'Smallest — good on any laptop' },
+  { name: 'llama3.1:8b', size: '~4.7 GB', note: 'Balanced everyday model' },
+  { name: 'qwen2.5:7b', size: '~4.7 GB', note: 'Strong at reasoning' },
+  { name: 'qwen2.5-coder:7b', size: '~4.7 GB', note: 'Best for code' },
+  { name: 'mistral:7b', size: '~4.1 GB', note: 'Fast general model' },
+] as const;
+
+export interface PullProgress {
+  status: string;
+  /** 0-100, or null when the server has not reported sizes yet. */
+  percent: number | null;
+  completedBytes: number;
+  totalBytes: number;
+}
+
+/**
+ * Downloads and installs a model onto the user's own machine through Ollama.
+ * Only ever called from an explicit user action — NOVA never starts a download
+ * on its own. Reports progress as the download streams.
+ */
+export async function pullLocalModel(
+  model: string,
+  baseUrl?: string,
+  onProgress?: (progress: PullProgress) => void,
+  signal?: AbortSignal,
+): Promise<{ ok: boolean; error: string | null }> {
+  const url = (baseUrl ?? getOllamaSettings().baseUrl).replace(/\/$/, '');
+  try {
+    const response = await fetch(`${url}/api/pull`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, stream: true }),
+      signal: signal ?? null,
+    });
+
+    if (!response.ok) {
+      const detail = await response.text();
+      return { ok: false, error: `Install failed (${response.status}): ${detail.slice(0, 300)}` };
+    }
+    if (!response.body) {
+      return { ok: false, error: 'The local AI server sent no progress information.' };
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let lastError: string | null = null;
+
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() ?? '';
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        let event: { status?: string; error?: string; completed?: number; total?: number };
+        try {
+          event = JSON.parse(line);
+        } catch {
+          continue;
+        }
+        if (event.error) {
+          lastError = event.error;
+          continue;
+        }
+        const completed = event.completed ?? 0;
+        const total = event.total ?? 0;
+        onProgress?.({
+          status: event.status ?? 'downloading',
+          percent: total > 0 ? Math.min(100, Math.round((completed / total) * 100)) : null,
+          completedBytes: completed,
+          totalBytes: total,
+        });
+      }
+    }
+
+    if (lastError) {
+      return { ok: false, error: `${lastError} Check the model name — it must exist in the Ollama library.` };
+    }
+    return { ok: true, error: null };
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      return { ok: false, error: 'Install cancelled. Nothing else was downloaded.' };
+    }
+    return {
+      ok: false,
+      error: `No local AI found at ${url}. Start Ollama on this machine, then try installing again.`,
+    };
+  }
+}
+
+export function formatBytes(bytes: number): string {
+  if (!bytes) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
+  return `${(bytes / 1024 ** i).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+}
+
 function withSystemPrompt(messages: ChatMessage[], systemPrompt?: string): ChatMessage[] {
   return [{ role: 'system', content: systemPrompt ?? DEFAULT_SYSTEM_PROMPT }, ...messages];
 }
