@@ -129,6 +129,16 @@ export function SettingsView() {
     const saved = getOllamaSettings();
     setLocalUrl(saved.baseUrl);
     setLocalModel(saved.model);
+    try {
+      const stored = window.localStorage.getItem(MODE_RESULTS_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as { at?: string; results?: ModeTestResult[] };
+        if (parsed.results?.length) {
+          setModeResults(parsed.results);
+          setModeResultsAt(parsed.at ?? null);
+        }
+      }
+    } catch { /* ignore unreadable saved results */ }
   }, []);
 
   useEffect(() => {
