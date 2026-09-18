@@ -523,17 +523,33 @@ export function SettingsView() {
                 are only tried on this device.
               </p>
             </div>
-            <button
-              onClick={handleModeCheck}
-              disabled={checkingModes}
-              className="flex items-center gap-2 px-4 py-2 bg-tertiary border border-subtle rounded-lg text-sm text-secondary hover:text-primary disabled:opacity-50"
-            >
-              {checkingModes ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-              {checkingModes ? 'Checking all modes...' : 'Run mode check'}
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={handleModeCheck}
+                disabled={checkingModes}
+                className="flex items-center gap-2 px-4 py-2 bg-tertiary border border-subtle rounded-lg text-sm text-secondary hover:text-primary disabled:opacity-50"
+              >
+                {checkingModes ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                {checkingModes ? 'Checking all modes...' : 'Run mode check'}
+              </button>
+              {modeResults && (
+                <button
+                  onClick={handleCopyReport}
+                  className="flex items-center gap-2 px-4 py-2 bg-tertiary border border-subtle rounded-lg text-sm text-secondary hover:text-primary"
+                >
+                  {copied ? <CheckCircle2 className="w-4 h-4 text-success-400" /> : <ClipboardCopy className="w-4 h-4" />}
+                  {copied ? 'Copied' : 'Copy report'}
+                </button>
+              )}
+            </div>
 
             {modeResults && (
               <div className="space-y-1.5">
+                <p className="text-xs text-tertiary">
+                  {modeResultsAt
+                    ? `Last check: ${new Date(modeResultsAt).toLocaleString()} (saved on this device)`
+                    : 'Last saved check'}
+                </p>
                 {modeResults.map((r) => (
                   <div
                     key={r.mode}
