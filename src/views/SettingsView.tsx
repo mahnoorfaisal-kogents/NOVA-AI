@@ -17,10 +17,13 @@ import {
   testLocalModel,
   localTroubleshooting,
   runModeCheck,
+  formatModeReport,
   type ModeTestResult,
 } from '@/lib/ai/orchestrator';
 
 type Tab = 'profile' | 'appearance' | 'personality' | 'local-ai' | 'privacy' | 'plans' | 'export';
+
+const MODE_RESULTS_KEY = 'nova.modeCheck.last';
 
 export function SettingsView() {
   const { user, profile, updateProfile, signOut } = useAuth();
