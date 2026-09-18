@@ -529,6 +529,103 @@ export function SettingsView() {
             )}
           </div>
 
+          <div className="border-t border-subtle pt-4 space-y-3">
+            <div>
+              <h4 className="text-sm font-medium text-primary flex items-center gap-2">
+                <Download className="w-4 h-4 text-electric-400" /> Install a model on this machine
+              </h4>
+              <p className="text-xs text-secondary mt-1">
+                Downloads run on your own computer through Ollama and only start when you press
+                Install. Models are large, so the first download can take a while. You can stop it at
+                any time.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              {SUGGESTED_LOCAL_MODELS.map((m) => {
+                const installed = localStatus?.models.some((x) => x === m.name || x === `${m.name}:latest`);
+                return (
+                  <div key={m.name} className="flex items-center gap-3 p-2.5 rounded-lg bg-tertiary/50">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs text-primary font-medium">{m.name}</p>
+                      <p className="text-xs text-tertiary">{m.size} · {m.note}</p>
+                    </div>
+                    {installed ? (
+                      <span className="text-xs text-success-400 flex items-center gap-1 shrink-0">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Installed
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handleInstallModel(m.name)}
+                        disabled={!!installing}
+                        className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-tertiary border border-subtle rounded-lg text-xs text-secondary hover:text-primary disabled:opacity-50"
+                      >
+                        {installing === m.name
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : <Download className="w-3.5 h-3.5" />}
+                        {installing === m.name ? 'Installing...' : 'Install'}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-secondary mb-1.5">Or install another model by name</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={installName}
+                  onChange={(e) => setInstallName(e.target.value)}
+                  placeholder="e.g. gemma3:4b"
+                  className="flex-1 px-3 py-2 bg-tertiary border border-subtle rounded-lg text-primary placeholder:text-tertiary focus:outline-none focus:border-electric-500 text-sm"
+                />
+                <button
+                  onClick={() => handleInstallModel(installName)}
+                  disabled={!!installing || !installName.trim()}
+                  className="flex items-center gap-2 px-3 py-2 bg-tertiary border border-subtle rounded-lg text-sm text-secondary hover:text-primary disabled:opacity-50"
+                >
+                  <Download className="w-4 h-4" /> Install
+                </button>
+              </div>
+            </div>
+
+            {installing && (
+              <div className="p-3 rounded-lg bg-tertiary/50 space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs text-secondary truncate">
+                    {installing}: {installProgress?.status ?? 'starting'}
+                    {installProgress && installProgress.totalBytes > 0 &&
+                      ` · ${formatBytes(installProgress.completedBytes)} of ${formatBytes(installProgress.totalBytes)}`}
+                  </p>
+                  <button onClick={cancelInstall} className="text-xs text-error-400 hover:underline shrink-0">
+                    Stop
+                  </button>
+                </div>
+                <div className="h-1.5 rounded-full bg-tertiary overflow-hidden">
+                  <div
+                    className="h-full nova-gradient transition-all"
+                    style={{ width: `${installProgress?.percent ?? 3}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {installResult && (
+              <div className={`flex items-start gap-2 p-3 rounded-lg border ${
+                installResult.ok ? 'bg-success-500/10 border-success-500/30' : 'bg-error-500/10 border-error-500/30'
+              }`}>
+                {installResult.ok
+                  ? <CheckCircle2 className="w-4 h-4 text-success-400 mt-0.5 shrink-0" />
+                  : <AlertCircle className="w-4 h-4 text-error-400 mt-0.5 shrink-0" />}
+                <p className={`text-xs ${installResult.ok ? 'text-success-400' : 'text-error-400'}`}>
+                  {installResult.message}
+                </p>
+              </div>
+            )}
+          </div>
+
           <div className="flex items-center gap-3">
             <button
               onClick={handleTestLocalModel}
