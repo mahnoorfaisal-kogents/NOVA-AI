@@ -56,6 +56,42 @@ export function SettingsView() {
   const [copied, setCopied] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const [retryNote, setRetryNote] = useState<string | null>(null);
+  const [installName, setInstallName] = useState('');
+  const [installing, setInstalling] = useState<string | null>(null);
+  const [installProgress, setInstallProgress] = useState<PullProgress | null>(null);
+  const [installResult, setInstallResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const installAbort = useRef<AbortController | null>(null);
+
+  /** Installs a model on this machine. Only ever runs from a click. */
+  const handleInstallModel = async (model: string) => {
+    const name = model.trim();
+    if (!name || installing) return;
+    setInstalling(name);
+    setInstallProgress(null);
+    setInstallResult(null);
+    const controller = new AbortController();
+    installAbort.current = controller;
+
+    const result = await pullLocalModel(name, localUrl, setInstallProgress, controller.signal);
+    installAbort.current = null;
+    setInstalling(null);
+    setInstallProgress(null);
+
+    if (result.ok) {
+      const status = await checkLocalAI(localUrl);
+      setLocalStatus(status);
+      saveLocalSettings(localUrl, name);
+      setInstallResult({ ok: true, message: `${name} is installed on this machine and selected for local answers.` });
+    } else {
+      setInstallResult({ ok: false, message: result.error ?? 'The install failed.' });
+    }
+  };
+
+  const cancelInstall = () => {
+    installAbort.current?.abort();
+    installAbort.current = null;
+  };
+
 
   const storeResults = (results: ModeTestResult[]) => {
     const at = new Date().toISOString();
