@@ -444,6 +444,22 @@ export function SettingsView() {
                     <li key={step} className="text-xs text-secondary">{step}</li>
                   ))}
                 </ol>
+                {!localStatus?.reachable && (
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <button
+                      onClick={startGuidedRetry}
+                      disabled={retrying}
+                      className="flex items-center gap-2 px-3 py-2 bg-tertiary border border-subtle rounded-lg text-xs text-secondary hover:text-primary disabled:opacity-50"
+                    >
+                      {retrying ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                      {retrying ? 'Waiting for local AI...' : 'Retry until it answers'}
+                    </button>
+                    <span className="text-xs text-tertiary">
+                      Keeps checking, then re-tests only the local modes that failed.
+                    </span>
+                  </div>
+                )}
+                {retryNote && <p className="text-xs text-secondary mt-2">{retryNote}</p>}
               </div>
             );
           })()}
