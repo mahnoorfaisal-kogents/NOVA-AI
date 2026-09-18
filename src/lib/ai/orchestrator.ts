@@ -309,3 +309,18 @@ export async function runModeCheck(
 
   return results;
 }
+
+/** Plain-text version of a mode check, suitable for copying into a support message. */
+export function formatModeReport(results: ModeTestResult[], when?: string): string {
+  const stamp = when ?? new Date().toISOString();
+  const lines = [
+    `NOVA mode check — ${stamp}`,
+    ''.padEnd(40, '-'),
+    ...results.map((r) => {
+      const state = r.ok ? 'OK' : 'FAILED';
+      const detail = r.ok ? `reply: "${r.reply}"` : `error: ${r.error ?? 'unknown error'}`;
+      return `${state} · ${r.label} (${r.mode}) · ${r.source} · ${r.ms} ms · ${detail}`;
+    }),
+  ];
+  return lines.join('\n');
+}

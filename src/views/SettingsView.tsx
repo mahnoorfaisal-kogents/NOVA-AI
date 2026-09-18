@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Settings as SettingsIcon, User as UserIcon, Palette, Brain, Shield, Download, Trash2, CreditCard, Cpu, CheckCircle2, AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
+import { Settings as SettingsIcon, User as UserIcon, Palette, Brain, Shield, Download, Trash2, CreditCard, Cpu, CheckCircle2, AlertCircle, RefreshCw, Loader2, ClipboardCopy } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
@@ -17,10 +17,13 @@ import {
   testLocalModel,
   localTroubleshooting,
   runModeCheck,
+  formatModeReport,
   type ModeTestResult,
 } from '@/lib/ai/orchestrator';
 
 type Tab = 'profile' | 'appearance' | 'personality' | 'local-ai' | 'privacy' | 'plans' | 'export';
+
+const MODE_RESULTS_KEY = 'nova.modeCheck.last';
 
 export function SettingsView() {
   const { user, profile, updateProfile, signOut } = useAuth();
@@ -44,15 +47,74 @@ export function SettingsView() {
   const [testingLocal, setTestingLocal] = useState(false);
   const [localTest, setLocalTest] = useState<{ ok: boolean; message: string } | null>(null);
   const [modeResults, setModeResults] = useState<ModeTestResult[] | null>(null);
+  const [modeResultsAt, setModeResultsAt] = useState<string | null>(null);
   const [checkingModes, setCheckingModes] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  const [retryNote, setRetryNote] = useState<string | null>(null);
+
+  const storeResults = (results: ModeTestResult[]) => {
+    const at = new Date().toISOString();
+    setModeResults(results);
+    setModeResultsAt(at);
+    try {
+      window.localStorage.setItem(MODE_RESULTS_KEY, JSON.stringify({ at, results }));
+    } catch { /* storage unavailable */ }
+  };
 
   const handleModeCheck = async () => {
     setCheckingModes(true);
-    setModeResults(null);
     const results = await runModeCheck(profile?.plan ?? 'free');
-    setModeResults(results);
+    storeResults(results);
     setCheckingModes(false);
   };
+
+  const handleCopyReport = async () => {
+    if (!modeResults) return;
+    try {
+      await navigator.clipboard.writeText(formatModeReport(modeResults, modeResultsAt ?? undefined));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  /**
+   * Guided retry: keeps checking for local AI, and as soon as it answers,
+   * re-runs only the local modes that failed last time.
+   */
+  const startGuidedRetry = async () => {
+    setRetrying(true);
+    setRetryNote('Waiting for local AI to answer...');
+    for (let attempt = 1; attempt <= 20; attempt++) {
+      const status = await checkLocalAI(localUrl);
+      setLocalStatus(status);
+      if (status.reachable) {
+        const failedLocal = (modeResults ?? [])
+          .filter((r) => !r.ok && r.source === 'On this device')
+          .map((r) => r.mode);
+        if (failedLocal.length === 0) {
+          setRetryNote('Local AI is reachable again.');
+        } else {
+          setRetryNote('Local AI is back — re-running the local modes that failed...');
+          const rerun = await runModeCheck(profile?.plan ?? 'free', failedLocal);
+          const merged = (modeResults ?? []).map(
+            (r) => rerun.find((n) => n.mode === r.mode) ?? r,
+          );
+          storeResults(merged);
+          setRetryNote('Local AI is back and the failing local modes were re-tested.');
+        }
+        setRetrying(false);
+        return;
+      }
+      setRetryNote(`Still no answer from ${localUrl} (attempt ${attempt} of 20). Restart Ollama and confirm the port above.`);
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+    }
+    setRetrying(false);
+    setRetryNote(`Gave up after 20 tries. Local AI at ${localUrl} never answered — start Ollama, then press Retry again.`);
+  };
+
 
   const detectLocal = useCallback(async (url?: string) => {
     setCheckingLocal(true);
@@ -67,6 +129,16 @@ export function SettingsView() {
     const saved = getOllamaSettings();
     setLocalUrl(saved.baseUrl);
     setLocalModel(saved.model);
+    try {
+      const stored = window.localStorage.getItem(MODE_RESULTS_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as { at?: string; results?: ModeTestResult[] };
+        if (parsed.results?.length) {
+          setModeResults(parsed.results);
+          setModeResultsAt(parsed.at ?? null);
+        }
+      }
+    } catch { /* ignore unreadable saved results */ }
   }, []);
 
   useEffect(() => {
@@ -372,6 +444,22 @@ export function SettingsView() {
                     <li key={step} className="text-xs text-secondary">{step}</li>
                   ))}
                 </ol>
+                {!localStatus?.reachable && (
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <button
+                      onClick={startGuidedRetry}
+                      disabled={retrying}
+                      className="flex items-center gap-2 px-3 py-2 bg-tertiary border border-subtle rounded-lg text-xs text-secondary hover:text-primary disabled:opacity-50"
+                    >
+                      {retrying ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                      {retrying ? 'Waiting for local AI...' : 'Retry until it answers'}
+                    </button>
+                    <span className="text-xs text-tertiary">
+                      Keeps checking, then re-tests only the local modes that failed.
+                    </span>
+                  </div>
+                )}
+                {retryNote && <p className="text-xs text-secondary mt-2">{retryNote}</p>}
               </div>
             );
           })()}
@@ -435,17 +523,33 @@ export function SettingsView() {
                 are only tried on this device.
               </p>
             </div>
-            <button
-              onClick={handleModeCheck}
-              disabled={checkingModes}
-              className="flex items-center gap-2 px-4 py-2 bg-tertiary border border-subtle rounded-lg text-sm text-secondary hover:text-primary disabled:opacity-50"
-            >
-              {checkingModes ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-              {checkingModes ? 'Checking all modes...' : 'Run mode check'}
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={handleModeCheck}
+                disabled={checkingModes}
+                className="flex items-center gap-2 px-4 py-2 bg-tertiary border border-subtle rounded-lg text-sm text-secondary hover:text-primary disabled:opacity-50"
+              >
+                {checkingModes ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                {checkingModes ? 'Checking all modes...' : 'Run mode check'}
+              </button>
+              {modeResults && (
+                <button
+                  onClick={handleCopyReport}
+                  className="flex items-center gap-2 px-4 py-2 bg-tertiary border border-subtle rounded-lg text-sm text-secondary hover:text-primary"
+                >
+                  {copied ? <CheckCircle2 className="w-4 h-4 text-success-400" /> : <ClipboardCopy className="w-4 h-4" />}
+                  {copied ? 'Copied' : 'Copy report'}
+                </button>
+              )}
+            </div>
 
             {modeResults && (
               <div className="space-y-1.5">
+                <p className="text-xs text-tertiary">
+                  {modeResultsAt
+                    ? `Last check: ${new Date(modeResultsAt).toLocaleString()} (saved on this device)`
+                    : 'Last saved check'}
+                </p>
                 {modeResults.map((r) => (
                   <div
                     key={r.mode}
