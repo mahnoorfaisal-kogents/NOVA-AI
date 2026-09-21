@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Bot, Trash2, Play, MoreHorizontal, Zap, FileText, Search, BarChart3, Code, PenTool, Brain, Shield, CheckCircle2 } from 'lucide-react';
+import { Plus, Bot, Trash2, Zap, FileText, Search, BarChart3, Code, PenTool, Shield, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import type { Agent, AgentType } from '@/types';
@@ -26,12 +26,15 @@ export function AgentsView() {
   const [newName, setNewName] = useState('');
   const [newType, setNewType] = useState<AgentType>('general');
   const [newInstructions, setNewInstructions] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const { data } = await supabase.from('agents').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
-    setAgents(data as Agent[] ?? []);
+    setError(null);
+    const { data, error: loadError } = await supabase.from('agents').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
+    if (loadError) setError(loadError.message);
+    setAgents((data as Agent[] | null) ?? []);
     setLoading(false);
   }, [user]);
 
@@ -40,12 +43,13 @@ export function AgentsView() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !newName.trim()) return;
-    const { data } = await supabase.from('agents').insert({
+    const { data, error: createError } = await supabase.from('agents').insert({
       user_id: user.id,
       name: newName.trim(),
       type: newType,
       instructions: newInstructions.trim() || null,
     }).select('*').maybeSingle();
+    if (createError) { setError(createError.message); return; }
     if (data) {
       setAgents((prev) => [data as Agent, ...prev]);
       setNewName('');
@@ -56,7 +60,8 @@ export function AgentsView() {
   };
 
   const handleDelete = async (id: string) => {
-    await supabase.from('agents').delete().eq('id', id);
+    const { error: deleteError } = await supabase.from('agents').delete().eq('id', id);
+    if (deleteError) { setError(deleteError.message); return; }
     setAgents((prev) => prev.filter((a) => a.id !== id));
   };
 
@@ -64,6 +69,7 @@ export function AgentsView() {
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-8 animate-fade-in">
+      {error && <div className="mb-4 rounded-lg border border-error-500/30 bg-error-500/10 px-4 py-3 text-sm text-error-300">{error}</div>}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
