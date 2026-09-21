@@ -94,18 +94,6 @@ export function ChatView() {
     return data.id;
   };
 
-  const recordUsage = async (model: string, provider: string, tokensIn: number, tokensOut: number) => {
-    if (!user) return;
-    await supabase.from('usage_records').insert({
-      user_id: user.id,
-      resource_type: 'chat_message',
-      model,
-      provider,
-      tokens_input: tokensIn,
-      tokens_output: tokensOut,
-    });
-  };
-
   const recordActivity = async (title: string, entityType: string, entityId: string) => {
     if (!user) return;
     await supabase.from('activity_events').insert({
@@ -234,8 +222,6 @@ export function ChatView() {
         status: 'complete',
         tokens: response.tokensOutput,
       });
-
-      await recordUsage(model.id, model.provider, response.tokensInput, response.tokensOutput);
       await recordActivity(`Sent message in conversation`, 'conversation', convId);
     }
 
