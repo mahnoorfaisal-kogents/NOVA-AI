@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, CheckSquare, Trash2, Calendar, Flag, MoreHorizontal } from 'lucide-react';
+import { Plus, CheckSquare, Trash2, Calendar } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import type { Task, TaskStatus, TaskPriority } from '@/types';
