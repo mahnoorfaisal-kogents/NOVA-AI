@@ -38,7 +38,7 @@ function friendlyError(status: number, message: string): string {
   if (status === 402) return message || "NOVA's AI allowance is used up. Add credits to keep generating answers.";
   if (status === 403) return message || "AI access is blocked for this workspace.";
   if (status === 429) return "NOVA is being rate limited right now. Please try again in a few seconds.";
-  return message || \`AI request failed (\${status}).\`;
+  return message || "AI request failed (" + status + ").";
 }
 
 function startOfUtcDay(): string {
@@ -77,7 +77,7 @@ export const novaCloudChat = createServerFn({ method: "POST" })
     const plan = profile.plan;
     const limits = getPlanLimits(plan);
     if (!limits.allowed_models.includes(data.model)) {
-      return { ...empty, error: \`The \${data.model} mode is not available on your current plan.\` };
+      return { ...empty, error: "The " + data.model + " mode is not available on your current plan." };
     }
 
     const { count, error: usageError } = await supabase
@@ -91,7 +91,7 @@ export const novaCloudChat = createServerFn({ method: "POST" })
       return { ...empty, error: "NOVA could not verify today's usage. Please try again." };
     }
     if ((count ?? 0) >= limits.max_messages_per_day) {
-      return { ...empty, error: \`You've reached your \${plan} plan's daily message limit. Try again tomorrow.\` };
+      return { ...empty, error: "You've reached your " + plan + " plan's daily message limit. Try again tomorrow." };
     }
 
     const upstreamModel = RUNTIME_MODEL;
