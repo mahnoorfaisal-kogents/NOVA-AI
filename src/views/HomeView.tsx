@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from '@/lib/router';
 import {
   Sparkles, MessageSquare, FolderKanban, CheckSquare,
-  Brain, Bot, Zap, ArrowRight, Activity, TrendingUp, Clock
+  Brain, Bot, Zap, ArrowRight, Activity, Clock
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -17,11 +17,13 @@ export function HomeView() {
   const [memories, setMemories] = useState<Memory[]>([]);
   const [activity, setActivity] = useState<ActivityEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [commandInput, setCommandInput] = useState('');
 
   const loadData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
+    setError(null);
 
     const [convRes, projRes, taskRes, memRes, actRes] = await Promise.all([
       supabase.from('conversations').select('*').eq('user_id', user.id).eq('archived', false).order('updated_at', { ascending: false }).limit(5),
@@ -31,11 +33,14 @@ export function HomeView() {
       supabase.from('activity_events').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
     ]);
 
-    setConversations(convRes.data as Conversation[] ?? []);
-    setProjects(projRes.data as Project[] ?? []);
-    setTasks(taskRes.data as Task[] ?? []);
-    setMemories(memRes.data as Memory[] ?? []);
-    setActivity(actRes.data as ActivityEvent[] ?? []);
+    const failures = [convRes, projRes, taskRes, memRes, actRes].map((r) => r.error?.message).filter((m): m is string => Boolean(m));
+    if (failures.length) setError(failures.join(' • '));
+
+    setConversations((convRes.data as Conversation[] | null) ?? []);
+    setProjects((projRes.data as Project[] | null) ?? []);
+    setTasks((taskRes.data as Task[] | null) ?? []);
+    setMemories((memRes.data as Memory[] | null) ?? []);
+    setActivity((actRes.data as ActivityEvent[] | null) ?? []);
     setLoading(false);
   }, [user]);
 
@@ -78,6 +83,13 @@ export function HomeView() {
           </div>
         </div>
       </div>
+
+      {error && (
+        <div className="mb-6 flex items-center justify-between gap-4 rounded-xl border border-error-500/30 bg-error-500/10 px-4 py-3 text-sm text-error-300">
+          <span className="min-w-0">{error}</span>
+          <button type="button" onClick={() => void loadData()} className="flex-shrink-0 rounded-lg border border-error-500/30 px-3 py-1.5 hover:bg-error-500/10">Retry</button>
+        </div>
+      )}
 
       {/* Command Input */}
       <form onSubmit={handleCommand} className="mb-8">
@@ -215,7 +227,7 @@ export function HomeView() {
                 {projects.map((proj) => (
                   <button
                     key={proj.id}
-                    onClick={() => navigate(`/projects/${proj.id}`)}
+                    onClick={() => navigate('/projects')}
                     className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-tertiary transition-colors text-left"
                   >
                     <div className="w-3 h-3 rounded flex-shrink-0" style={{ background: proj.color || '#3b82f6' }} />
