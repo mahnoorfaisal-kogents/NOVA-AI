@@ -22,6 +22,8 @@ export function AuthScreen() {
 
     if (result.error) {
       setError(result.error);
+    } else if (mode === 'signup') {
+      setError('Account created. If email confirmation is enabled, check your inbox, verify the address, then sign in. If confirmation is disabled, NOVA will open the dashboard automatically.');
     }
     setLoading(false);
   };
