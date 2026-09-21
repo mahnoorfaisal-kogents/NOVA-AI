@@ -122,13 +122,24 @@ WAIT FOR MY APPROVAL BEFORE MAKING ANY CODE CHANGES.
 
 This project was built with [Lovable](https://lovable.dev).
 
+## Current AI architecture
+
+NOVA exposes user-facing modes instead of provider/API-key selection:
+
+- **Auto / Fast / Reasoning / Coding / Research** — authenticated cloud inference through NOVA's managed AI runtime.
+- **Private / Offline** — Ollama on the user's own machine. These modes never fall back to cloud inference.
+- **Local AI settings** — detects the user's Ollama endpoint, lists installed models, supports explicit model installation, and can test local inference.
+- **Server-side entitlements** — cloud mode access and daily message limits are checked against the user's plan on the server.
+- **Protected accounting** — usage records are readable by the user but are written/deleted only by trusted server operations.
+- **Database quotas** — project, task, agent, automation, memory, and file limits are enforced at the database boundary.
+
+NOVA does not expose OpenAI, Anthropic, Gemini, Groq, OpenRouter, or NVIDIA NIM API-key configuration to users.
+
 ## Build with Lovable
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/dedd623a-2eb1-4d49-9dfb-e2e20394ae4f).
+This project was built with [Lovable](https://lovable.dev).
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/dedd623a-2eb1-4d49-9dfb-e2e20394ae4f).
 
 ## Development
 
