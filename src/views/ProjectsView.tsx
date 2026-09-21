@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from '@/lib/router';
-import { Plus, FolderKanban, MoreHorizontal, Trash2, Edit2, FileText, MessageSquare, CheckSquare } from 'lucide-react';
+import { Plus, FolderKanban, MoreHorizontal, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import type { Project } from '@/types';
@@ -106,7 +106,7 @@ export function ProjectsView() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {projects.map((proj) => (
             <div key={proj.id} className="relative group glass rounded-xl p-5 hover:border-electric-500/30 transition-colors">
-              <button onClick={() => navigate(`/projects/${proj.id}`)} className="block w-full text-left">
+              <button onClick={() => navigate('/projects')} className="block w-full text-left">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-3 h-3 rounded" style={{ background: proj.color || '#3b82f6' }} />
                   <h3 className="font-semibold text-primary truncate">{proj.name}</h3>
