@@ -14,12 +14,15 @@ export function ProjectsView() {
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const { data } = await supabase.from('projects').select('*').eq('user_id', user.id).order('updated_at', { ascending: false });
-    setProjects(data as Project[] ?? []);
+    setError(null);
+    const { data, error: loadError } = await supabase.from('projects').select('*').eq('user_id', user.id).order('updated_at', { ascending: false });
+    if (loadError) setError(loadError.message);
+    setProjects((data as Project[] | null) ?? []);
     setLoading(false);
   }, [user]);
 
@@ -28,12 +31,13 @@ export function ProjectsView() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !newName.trim()) return;
-    const { data } = await supabase.from('projects').insert({
+    const { data, error: createError } = await supabase.from('projects').insert({
       user_id: user.id,
       name: newName.trim(),
       description: newDesc.trim() || null,
       color: '#3b82f6',
     }).select('*').maybeSingle();
+    if (createError) { setError(createError.message); return; }
     if (data) {
       setProjects((prev) => [data as Project, ...prev]);
       setNewName('');
@@ -43,12 +47,15 @@ export function ProjectsView() {
   };
 
   const handleDelete = async (id: string) => {
-    await supabase.from('projects').delete().eq('id', id);
+    const { error: deleteError } = await supabase.from('projects').delete().eq('id', id);
+    if (deleteError) { setError(deleteError.message); return; }
     setProjects((prev) => prev.filter((p) => p.id !== id));
   };
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-8 animate-fade-in">
+{error && <div className="mb-4 rounded-lg border border-error-500/30 bg-error-500/10 px-4 py-3 text-sm text-error-300">{error}</div>}
+
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-primary">Projects</h1>
