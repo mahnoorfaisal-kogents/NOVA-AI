@@ -135,7 +135,11 @@ export const novaCloudChat = createServerFn({ method: "POST" })
 
       if (!content.trim()) return { ...empty, error: "The AI runtime returned an empty response." };
 
-      const { error: insertUsageError } = await supabase.from("usage_records").insert({
+      // Usage telemetry is intentionally service-role-only. The authenticated
+      // client can read its own history but cannot manufacture/delete accounting
+      // rows. Dynamic import keeps the service-role client server-only.
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { error: insertUsageError } = await supabaseAdmin.from("usage_records").insert({
         user_id: userId,
         resource_type: "chat_message",
         model: data.model,
