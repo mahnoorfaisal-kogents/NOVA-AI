@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
-import type { UserProfile, PlanTier } from '@/types';
+import type { UserProfile } from '@/types';
 
 interface AuthContextValue {
   session: Session | null;
@@ -37,40 +37,65 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (data) {
       setProfile(data as UserProfile);
-    } else {
-      const { data: newProfile } = await supabase
-        .from('profiles')
-        .insert({ id: userId, email: '', plan: 'free' as PlanTier })
-        .select('*')
-        .maybeSingle();
-      if (newProfile) setProfile(newProfile as UserProfile);
+      return;
     }
+
+    // The database normally creates profiles automatically. This is a safe
+    // fallback for older projects, and it never accepts a client-supplied plan.
+    const currentUser = (await supabase.auth.getUser()).data.user;
+    const { data: newProfile, error: insertError } = await supabase
+      .from('profiles')
+      .insert({
+        id: userId,
+        email: currentUser?.email ?? '',
+        full_name: typeof currentUser?.user_metadata?.full_name === 'string'
+          ? currentUser.user_metadata.full_name
+          : null,
+      })
+      .select('*')
+      .maybeSingle();
+
+    if (insertError) {
+      console.error('Error creating profile:', insertError.message);
+      return;
+    }
+
+    if (newProfile) setProfile(newProfile as UserProfile);
   }, []);
 
   useEffect(() => {
+    let mounted = true;
+
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
       setSession(session);
       setUser(session?.user ?? null);
+
       if (session?.user) {
-        fetchProfile(session.user.id).finally(() => setLoading(false));
+        fetchProfile(session.user.id).finally(() => {
+          if (mounted) setLoading(false);
+        });
       } else {
         setLoading(false);
       }
     });
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        (async () => {
-          await fetchProfile(session.user.id);
-        })();
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (!mounted) return;
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+
+      if (nextSession?.user) {
+        void fetchProfile(nextSession.user.id);
       } else {
         setProfile(null);
       }
     });
 
-    return () => authListener.subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      authListener.subscription.unsubscribe();
+    };
   }, [fetchProfile]);
 
   const signIn = async (email: string, password: string) => {
@@ -89,6 +114,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    setSession(null);
+    setUser(null);
     setProfile(null);
   };
 
@@ -98,16 +125,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateProfile = async (updates: Partial<UserProfile>) => {
     if (!user) return { error: 'Not authenticated' };
+
+    // Never allow a browser caller to change identity, ownership, timestamps,
+    // or billing/entitlement state. Plan changes belong to a trusted server flow.
+    const {
+      id: _id,
+      email: _email,
+      plan: _plan,
+      created_at: _createdAt,
+      updated_at: _updatedAt,
+      ...safeUpdates
+    } = updates;
+
     const { error } = await supabase
       .from('profiles')
-      .update(updates)
+      .update(safeUpdates)
       .eq('id', user.id);
+
     if (!error) await refreshProfile();
     return { error: error?.message ?? null };
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, profile, loading, signIn, signUp, signOut, refreshProfile, updateProfile }}>
+    <AuthContext.Provider
+      value={{
+        session,
+        user,
+        profile,
+        loading,
+        signIn,
+        signUp,
+        signOut,
+        refreshProfile,
+        updateProfile,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
