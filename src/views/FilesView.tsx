@@ -12,12 +12,15 @@ export function FilesView() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const { data } = await supabase.from('project_files').select('*').eq('user_id', user.id).eq('deleted', false).order('created_at', { ascending: false });
-    setFiles(data as ProjectFile[] ?? []);
+    setError(null);
+    const { data, error: loadError } = await supabase.from('project_files').select('*').eq('user_id', user.id).eq('deleted', false).order('created_at', { ascending: false });
+    if (loadError) setError(loadError.message);
+    setFiles((data as ProjectFile[] | null) ?? []);
     setLoading(false);
   }, [user]);
 
@@ -26,6 +29,7 @@ export function FilesView() {
   const handleFileUpload = async (fileList: FileList | null) => {
     if (!fileList || !user) return;
     setUploading(true);
+    setError(null);
 
     for (const file of Array.from(fileList)) {
       const ext = file.name.split('.').pop()?.toLowerCase() ?? 'txt';
@@ -35,7 +39,7 @@ export function FilesView() {
         contentText = await file.text();
       }
 
-      await supabase.from('project_files').insert({
+      const { error: uploadError } = await supabase.from('project_files').insert({
         user_id: user.id,
         name: file.name,
         file_type: ext,
@@ -44,6 +48,10 @@ export function FilesView() {
         tags: [],
         metadata: {},
       });
+      if (uploadError) {
+        setError(`${file.name}: ${uploadError.message}`);
+        break;
+      }
     }
 
     await load();
@@ -51,7 +59,8 @@ export function FilesView() {
   };
 
   const handleDelete = async (id: string) => {
-    await supabase.from('project_files').update({ deleted: true }).eq('id', id);
+    const { error: deleteError } = await supabase.from('project_files').update({ deleted: true }).eq('id', id);
+    if (deleteError) { setError(deleteError.message); return; }
     setFiles((prev) => prev.filter((f) => f.id !== id));
   };
 
@@ -71,6 +80,8 @@ export function FilesView() {
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-8 animate-fade-in">
+      {error && <div className="mb-4 rounded-lg border border-error-500/30 bg-error-500/10 px-4 py-3 text-sm text-error-300">{error}</div>}
+
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
