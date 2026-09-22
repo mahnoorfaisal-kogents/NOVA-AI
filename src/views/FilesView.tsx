@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { FileText, Trash2, Upload, Search, File, FileCode, FileSpreadsheet } from 'lucide-react';
+import { FileText, Trash2, Upload, Search, File, FileCode, FileSpreadsheet, Download } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import type { ProjectFile } from '@/types';
@@ -39,16 +39,31 @@ export function FilesView() {
         contentText = await file.text();
       }
 
+      const storagePath = `${user.id}/${crypto.randomUUID()}-${file.name}`;
+      const { error: storageError } = await supabase.storage.from('nova-files').upload(storagePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: file.type || undefined,
+      });
+
+      if (storageError) {
+        setError(`${file.name}: ${storageError.message}`);
+        break;
+      }
+
       const { error: uploadError } = await supabase.from('project_files').insert({
         user_id: user.id,
         name: file.name,
         file_type: ext,
         file_size: file.size,
+        storage_path: storagePath,
         content_text: contentText,
         tags: [],
-        metadata: {},
+        metadata: { mime_type: file.type || null },
       });
+
       if (uploadError) {
+        await supabase.storage.from('nova-files').remove([storagePath]);
         setError(`${file.name}: ${uploadError.message}`);
         break;
       }
@@ -58,10 +73,28 @@ export function FilesView() {
     setUploading(false);
   };
 
-  const handleDelete = async (id: string) => {
-    const { error: deleteError } = await supabase.from('project_files').update({ deleted: true }).eq('id', id);
+  const handleDownload = async (file: ProjectFile) => {
+    if (!file.storage_path) {
+      setError('This file has no stored asset.');
+      return;
+    }
+    const { data, error: signedError } = await supabase.storage
+      .from('nova-files')
+      .createSignedUrl(file.storage_path, 60);
+    if (signedError || !data?.signedUrl) {
+      setError(signedError?.message ?? 'Unable to create a download link.');
+      return;
+    }
+    window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleDelete = async (file: ProjectFile) => {
+    const { error: deleteError } = await supabase.from('project_files').update({ deleted: true }).eq('id', file.id);
     if (deleteError) { setError(deleteError.message); return; }
-    setFiles((prev) => prev.filter((f) => f.id !== id));
+    if (file.storage_path) {
+      await supabase.storage.from('nova-files').remove([file.storage_path]);
+    }
+    setFiles((prev) => prev.filter((f) => f.id !== file.id));
   };
 
   const getFileIcon = (fileType: string) => {
@@ -154,12 +187,10 @@ export function FilesView() {
                     {file.content_text && <span className="text-xs text-success-400">Indexed</span>}
                   </div>
                 </div>
-                <button
-                  onClick={() => handleDelete(file.id)}
-                  className="p-1.5 opacity-0 group-hover:opacity-100 text-tertiary hover:text-error-400 transition-all"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => void handleDownload(file)} className="p-1.5 text-tertiary hover:text-electric-400" title="Download"><Download className="w-3.5 h-3.5" /></button>
+                  <button onClick={() => void handleDelete(file)} className="p-1.5 text-tertiary hover:text-error-400" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button>
+                </div>
               </div>
             );
           })}
