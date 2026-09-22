@@ -107,6 +107,15 @@ export function HomeView() {
     { label: 'AI Usage', value: resourceCounts.usage, icon: Gauge, color: 'text-cyan-400', to: '/usage' },
   ];
 
+  const quickActions = [
+    { label: 'New Chat', icon: MessageSquare, to: '/chat' },
+    { label: 'New Project', icon: Plus, to: '/projects' },
+    { label: 'Upload File', icon: Upload, to: '/files' },
+    { label: 'Create Task', icon: CheckSquare, to: '/tasks' },
+    { label: 'Run Agent', icon: Play, to: '/agents' },
+    { label: 'Start Research', icon: Search, to: '/research' },
+  ];
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 animate-fade-in">
       <section className="relative overflow-hidden rounded-2xl border border-electric-500/15 bg-gradient-to-br from-electric-500/10 via-transparent to-cyan-500/10 p-6 sm:p-8 mb-6">
@@ -182,8 +191,9 @@ export function HomeView() {
             return (
               <button
                 key={feature.to}
-                onClick={() => navigate(feature.to)}
-                className="group glass rounded-xl p-4 text-left hover:border-electric-500/30 hover:bg-tertiary/60 hover:-translate-y-0.5 transition-all"
+                onClick={() => !locked && navigate(feature.to)}
+                disabled={locked}
+                className={`group glass rounded-xl p-4 text-left transition-all ${locked ? 'opacity-50 cursor-not-allowed' : 'hover:border-electric-500/30 hover:bg-tertiary/60 hover:-translate-y-0.5'}`}
               >
                 <div className="flex items-start justify-between gap-3 mb-4">
                   <div className={`w-9 h-9 rounded-lg border flex items-center justify-center ${toneClasses[feature.tone]}`}>
@@ -210,7 +220,7 @@ export function HomeView() {
             {loading ? <div className="space-y-2">{[1,2,3].map((i) => <div key={i} className="h-12 shimmer-bg rounded-lg" />)}</div> :
               conversations.length === 0 ? <div className="text-center py-8 text-tertiary text-sm">No conversations yet. Start one above.</div> :
               <div className="space-y-1">{conversations.map((conv) => (
-                <button key={conv.id} onClick={() => navigate('/chat')} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-tertiary transition-colors text-left group">
+                <button key={conv.id} onClick={() => navigate(`/chat/${conv.id}`)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-tertiary transition-colors text-left group">
                   <MessageSquare className="w-4 h-4 text-tertiary group-hover:text-electric-400 flex-shrink-0" />
                   <span className="flex-1 text-sm text-primary truncate">{conv.title}</span>
                   <span className="text-xs text-tertiary flex-shrink-0">{new Date(conv.updated_at).toLocaleDateString()}</span>
