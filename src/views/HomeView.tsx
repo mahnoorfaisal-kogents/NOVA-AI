@@ -3,7 +3,7 @@ import { useNavigate } from '@/lib/router';
 import {
   Sparkles, MessageSquare, FolderKanban, FileText, CheckSquare,
   Brain, Bot, Zap, ArrowRight, Activity, Clock, Search, BarChart3,
-  Network, Shield, Gauge, Settings, Lock, Command, Layers3, Plus, Upload, Play, RefreshCw, Cpu, Database, CircleCheck
+  Network, Shield, Gauge, Settings, Lock, Command, Layers3, Plus, Upload, Play
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -164,7 +164,7 @@ export function HomeView() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-2.5 mb-5">
         {stats.map((stat) => (
           <button key={stat.label} onClick={() => navigate(stat.to)} className="glass rounded-xl p-4 text-left hover:border-electric-500/30 hover:-translate-y-0.5 transition-all">
             <div className="flex items-center justify-between mb-2">
@@ -176,7 +176,7 @@ export function HomeView() {
         ))}
       </div>
 
-      <section className="mb-8">
+      <section className="glass rounded-2xl p-4 sm:p-5 mb-5">\n        <div className="flex items-center justify-between gap-3 mb-4">\n          <div><p className="text-[10px] uppercase tracking-[0.2em] text-electric-400 mb-1">Quick Actions</p><h2 className="font-semibold text-primary">Launch a workflow</h2></div>\n          <span className="text-xs text-tertiary">One click to start</span>\n        </div>\n        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">\n          {quickActions.map((action) => (\n            <button key={action.label} onClick={() => navigate(action.to)} className="group flex items-center gap-2.5 rounded-xl border border-subtle bg-tertiary/40 px-3 py-3 text-left hover:border-electric-500/30 hover:bg-electric-500/5 transition-all">\n              <action.icon className="w-4 h-4 text-electric-400 group-hover:scale-110 transition-transform" />\n              <span className="text-xs font-medium text-primary">{action.label}</span>\n            </button>\n          ))}\n        </div>\n      </section>\n\n      <section className="mb-8">
         <div className="flex items-end justify-between gap-3 mb-4">
           <div>
             <p className="text-xs uppercase tracking-widest text-electric-400 mb-1">Workspace</p>
