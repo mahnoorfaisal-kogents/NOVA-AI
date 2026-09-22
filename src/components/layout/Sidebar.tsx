@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from '@/lib/router';
 import {
   Home, MessageSquare, FolderKanban, FileText, CheckSquare,
-  Bot, Zap, Brain, Search, BarChart3, Settings, Sparkles,
+  Bot, Zap, Brain, Search, BarChart3, Settings, Sparkles, Gauge,
   ChevronLeft, ChevronRight, Activity, Network, Shield
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -23,6 +23,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/automations', label: 'Automations', icon: Zap },
   { to: '/memory', label: 'Memory', icon: Brain },
   { to: '/search', label: 'Search', icon: Search },
+  { to: '/usage', label: 'Usage', icon: Gauge },
   { to: '/research', label: 'Research', icon: BarChart3 },
   { to: '/timeline', label: 'Timeline', icon: Activity },
   { to: '/knowledge', label: 'Knowledge', icon: Network },

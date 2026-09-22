@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
 import { PLANS } from '@/lib/plans';
+import { deleteAllUserData } from '@/lib/account.functions';
 import type { PersonalityType } from '@/types';
 import { PERSONALITIES } from '@/lib/ai/personality';
 import {
@@ -281,12 +282,22 @@ export function SettingsView() {
 
   const handleDeleteAllData = async () => {
     if (!user) return;
-    if (!confirm('This will permanently delete ALL your NOVA data (conversations, memories, projects, tasks, files, agents, automations). This cannot be undone. Type DELETE to confirm.')) return;
-    const tables = ['messages', 'conversations', 'memories', 'project_files', 'file_versions', 'tasks', 'agents', 'agent_runs', 'automations', 'automation_runs', 'preferences', 'notifications', 'usage_records', 'audit_logs', 'activity_events', 'approval_requests', 'knowledge_entities', 'timeline_entries', 'conversation_summaries', 'folders', 'projects'];
-    for (const table of tables) {
-      await supabase.from(table).delete().eq('user_id', user.id);
+    const confirmed = prompt('This permanently deletes all NOVA data. Type DELETE to confirm.');
+    if (confirmed !== 'DELETE') return;
+
+    setExporting(true);
+    try {
+      const result = await deleteAllUserData({ data: { confirm: 'DELETE' } });
+      if (!result.ok) {
+        alert(result.error ?? 'NOVA could not delete all data. Nothing was silently reported as complete.');
+        return;
+      }
+      await signOut();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'NOVA could not delete your data.');
+    } finally {
+      setExporting(false);
     }
-    await signOut();
   };
 
   const tabs: { id: Tab; label: string; icon: typeof UserIcon }[] = [

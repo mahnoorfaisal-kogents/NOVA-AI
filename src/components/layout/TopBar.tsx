@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Search, Bell, Settings, LogOut, User as UserIcon, ChevronDown, Command, Sun, Moon, Monitor } from 'lucide-react';
+import { Search, Bell, Settings, LogOut, User as UserIcon, ChevronDown, Command, Sun, Moon, Monitor, Cpu } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -18,21 +18,47 @@ export function TopBar({ onCommandPalette }: TopBarProps) {
   const [showNotifs, setShowNotifs] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showThemeMenu, setShowThemeMenu] = useState(false);
+  const [showModeMenu, setShowModeMenu] = useState(false);
+  const [mode, setMode] = useState(() => typeof window === 'undefined' ? 'nova-auto' : localStorage.getItem('nova-ai-mode') || 'nova-auto');
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const themeRef = useRef<HTMLDivElement>(null);
+  const modeRef = useRef<HTMLDivElement>(null);
+  const MODES: Array<{ id: string; label: string }> = [
+    { id: 'nova-auto', label: 'Auto' },
+    { id: 'nova-fast', label: 'Fast' },
+    { id: 'nova-reasoning', label: 'Reasoning' },
+    { id: 'nova-coding', label: 'Coding' },
+    { id: 'nova-research', label: 'Research' },
+    { id: 'nova-private', label: 'Private' },
+    { id: 'nova-offline', label: 'Offline' },
+  ];
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) setShowNotifs(false);
       if (profileRef.current && !profileRef.current.contains(e.target as Node)) setShowProfile(false);
       if (themeRef.current && !themeRef.current.contains(e.target as Node)) setShowThemeMenu(false);
+      if (modeRef.current && !modeRef.current.contains(e.target as Node)) setShowModeMenu(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  useEffect(() => {
+    const onModeChange = (event: Event) => setMode((event as CustomEvent<string>).detail || 'nova-auto');
+    window.addEventListener('nova-ai-mode-change', onModeChange);
+    return () => window.removeEventListener('nova-ai-mode-change', onModeChange);
+  }, []);
+
   const themeIcon = theme === 'dark' ? <Moon className="w-4 h-4" /> : theme === 'light' ? <Sun className="w-4 h-4" /> : <Monitor className="w-4 h-4" />;
+  const activeMode = MODES.find((item) => item.id === mode) ?? MODES[0];
+  const setAiMode = (nextMode: string) => {
+    setMode(nextMode);
+    localStorage.setItem('nova-ai-mode', nextMode);
+    window.dispatchEvent(new CustomEvent('nova-ai-mode-change', { detail: nextMode }));
+    setShowModeMenu(false);
+  };
 
   return (
     <header className="h-14 glass border-b border-subtle flex items-center justify-between px-4 sticky top-0 z-20">
@@ -48,6 +74,22 @@ export function TopBar({ onCommandPalette }: TopBarProps) {
       </button>
 
       <div className="flex items-center gap-1">
+        <div className="relative" ref={modeRef}>
+          <button onClick={() => setShowModeMenu(!showModeMenu)} className="hidden sm:flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-secondary hover:text-primary hover:bg-tertiary transition-colors" title="AI mode">
+            <Cpu className="w-4 h-4 text-electric-400" /><span className="text-xs font-medium">{activeMode.label}</span><ChevronDown className="w-3 h-3 text-tertiary" />
+          </button>
+          {showModeMenu && (
+            <div className="absolute right-0 top-full mt-1 glass-strong rounded-lg shadow-xl py-1 min-w-[150px] z-50">
+              <div className="px-3 py-1.5 text-[10px] uppercase tracking-widest text-tertiary">AI Mode</div>
+              {MODES.map((item) => (
+                <button key={item.id} onClick={() => setAiMode(item.id)} className={item.id === mode ? "w-full flex items-center justify-between px-3 py-2 text-sm text-electric-400 bg-electric-500/10" : "w-full flex items-center justify-between px-3 py-2 text-sm text-secondary hover:text-primary hover:bg-tertiary"}>
+                  <span>{item.label}</span>{(item.id === 'nova-private' || item.id === 'nova-offline') && <span className="text-[9px] text-success-400">LOCAL</span>}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="relative" ref={themeRef}>
           <button
             onClick={() => setShowThemeMenu(!showThemeMenu)}

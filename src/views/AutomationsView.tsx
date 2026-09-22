@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Zap, Trash2, Play, Clock, CheckCircle2, AlertCircle, Loader2, Power } from 'lucide-react';
+import { Plus, Zap, Trash2, Power } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import type { Automation, AutomationTrigger, AutomationActionType } from '@/types';
@@ -29,12 +29,15 @@ export function AutomationsView() {
   const [newName, setNewName] = useState('');
   const [newTrigger, setNewTrigger] = useState<AutomationTrigger>('schedule');
   const [newAction, setNewAction] = useState<AutomationActionType>('notification');
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const { data } = await supabase.from('automations').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
-    setAutomations(data as Automation[] ?? []);
+    setError(null);
+    const { data, error: loadError } = await supabase.from('automations').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
+    if (loadError) setError(loadError.message);
+    setAutomations((data as Automation[] | null) ?? []);
     setLoading(false);
   }, [user]);
 
@@ -43,7 +46,7 @@ export function AutomationsView() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !newName.trim()) return;
-    const { data } = await supabase.from('automations').insert({
+    const { data, error: createError } = await supabase.from('automations').insert({
       user_id: user.id,
       name: newName.trim(),
       trigger_type: newTrigger,
@@ -52,6 +55,7 @@ export function AutomationsView() {
       conditions: {},
       action_config: {},
     }).select('*').maybeSingle();
+    if (createError) { setError(createError.message); return; }
     if (data) {
       setAutomations((prev) => [data as Automation, ...prev]);
       setNewName('');
@@ -60,17 +64,20 @@ export function AutomationsView() {
   };
 
   const handleToggle = async (auto: Automation) => {
-    await supabase.from('automations').update({ enabled: !auto.enabled }).eq('id', auto.id);
+    const { error: updateError } = await supabase.from('automations').update({ enabled: !auto.enabled }).eq('id', auto.id);
+    if (updateError) { setError(updateError.message); return; }
     setAutomations((prev) => prev.map((a) => a.id === auto.id ? { ...a, enabled: !a.enabled } : a));
   };
 
   const handleDelete = async (id: string) => {
-    await supabase.from('automations').delete().eq('id', id);
+    const { error: deleteError } = await supabase.from('automations').delete().eq('id', id);
+    if (deleteError) { setError(deleteError.message); return; }
     setAutomations((prev) => prev.filter((a) => a.id !== id));
   };
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-8 animate-fade-in">
+      {error && <div className="mb-4 rounded-lg border border-error-500/30 bg-error-500/10 px-4 py-3 text-sm text-error-300">{error}</div>}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-primary flex items-center gap-2">

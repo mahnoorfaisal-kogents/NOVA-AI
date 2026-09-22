@@ -18,7 +18,7 @@ export function routeModel(
   const availableModels = getModelsForPlan(plan);
 
   if (availableModels.length === 0) {
-    return { model: availableModels[0], reason: 'No models available', fallback: null };
+    throw new Error(`No AI models are available for the ${plan} plan.`);
   }
 
   if (userOverride) {

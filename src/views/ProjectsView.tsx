@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from '@/lib/router';
-import { Plus, FolderKanban, MoreHorizontal, Trash2, Edit2, FileText, MessageSquare, CheckSquare } from 'lucide-react';
+import { Plus, FolderKanban, MoreHorizontal, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import type { Project } from '@/types';
@@ -14,12 +14,15 @@ export function ProjectsView() {
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const { data } = await supabase.from('projects').select('*').eq('user_id', user.id).order('updated_at', { ascending: false });
-    setProjects(data as Project[] ?? []);
+    setError(null);
+    const { data, error: loadError } = await supabase.from('projects').select('*').eq('user_id', user.id).order('updated_at', { ascending: false });
+    if (loadError) setError(loadError.message);
+    setProjects((data as Project[] | null) ?? []);
     setLoading(false);
   }, [user]);
 
@@ -28,12 +31,13 @@ export function ProjectsView() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !newName.trim()) return;
-    const { data } = await supabase.from('projects').insert({
+    const { data, error: createError } = await supabase.from('projects').insert({
       user_id: user.id,
       name: newName.trim(),
       description: newDesc.trim() || null,
       color: '#3b82f6',
     }).select('*').maybeSingle();
+    if (createError) { setError(createError.message); return; }
     if (data) {
       setProjects((prev) => [data as Project, ...prev]);
       setNewName('');
@@ -43,12 +47,15 @@ export function ProjectsView() {
   };
 
   const handleDelete = async (id: string) => {
-    await supabase.from('projects').delete().eq('id', id);
+    const { error: deleteError } = await supabase.from('projects').delete().eq('id', id);
+    if (deleteError) { setError(deleteError.message); return; }
     setProjects((prev) => prev.filter((p) => p.id !== id));
   };
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-8 animate-fade-in">
+{error && <div className="mb-4 rounded-lg border border-error-500/30 bg-error-500/10 px-4 py-3 text-sm text-error-300">{error}</div>}
+
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-primary">Projects</h1>
@@ -99,7 +106,7 @@ export function ProjectsView() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {projects.map((proj) => (
             <div key={proj.id} className="relative group glass rounded-xl p-5 hover:border-electric-500/30 transition-colors">
-              <button onClick={() => navigate(`/projects/${proj.id}`)} className="block w-full text-left">
+              <button onClick={() => navigate('/projects')} className="block w-full text-left">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-3 h-3 rounded" style={{ background: proj.color || '#3b82f6' }} />
                   <h3 className="font-semibold text-primary truncate">{proj.name}</h3>

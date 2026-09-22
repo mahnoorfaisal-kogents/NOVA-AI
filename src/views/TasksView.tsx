@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, CheckSquare, Trash2, Calendar, Flag, MoreHorizontal } from 'lucide-react';
+import { Plus, CheckSquare, Trash2, Calendar } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import type { Task, TaskStatus, TaskPriority } from '@/types';
@@ -25,12 +25,15 @@ export function TasksView() {
   const [newTitle, setNewTitle] = useState('');
   const [newPriority, setNewPriority] = useState<TaskPriority>('medium');
   const [filter, setFilter] = useState<TaskStatus | 'all'>('all');
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const { data } = await supabase.from('tasks').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
-    setTasks(data as Task[] ?? []);
+    setError(null);
+    const { data, error: loadError } = await supabase.from('tasks').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
+    if (loadError) setError(loadError.message);
+    setTasks((data as Task[] | null) ?? []);
     setLoading(false);
   }, [user]);
 
@@ -39,11 +42,12 @@ export function TasksView() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !newTitle.trim()) return;
-    const { data } = await supabase.from('tasks').insert({
+    const { data, error: createError } = await supabase.from('tasks').insert({
       user_id: user.id,
       title: newTitle.trim(),
       priority: newPriority,
     }).select('*').maybeSingle();
+    if (createError) { setError(createError.message); return; }
     if (data) {
       setTasks((prev) => [data as Task, ...prev]);
       setNewTitle('');
@@ -54,12 +58,14 @@ export function TasksView() {
 
   const toggleStatus = async (task: Task) => {
     const newStatus = task.status === 'completed' ? 'todo' : task.status === 'todo' ? 'in_progress' : 'completed';
-    await supabase.from('tasks').update({ status: newStatus }).eq('id', task.id);
+    const { error: updateError } = await supabase.from('tasks').update({ status: newStatus }).eq('id', task.id);
+    if (updateError) { setError(updateError.message); return; }
     setTasks((prev) => prev.map((t) => t.id === task.id ? { ...t, status: newStatus } : t));
   };
 
   const handleDelete = async (id: string) => {
-    await supabase.from('tasks').delete().eq('id', id);
+    const { error: deleteError } = await supabase.from('tasks').delete().eq('id', id);
+    if (deleteError) { setError(deleteError.message); return; }
     setTasks((prev) => prev.filter((t) => t.id !== id));
   };
 
@@ -74,6 +80,8 @@ export function TasksView() {
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-8 animate-fade-in">
+{error && <div className="mb-4 rounded-lg border border-error-500/30 bg-error-500/10 px-4 py-3 text-sm text-error-300">{error}</div>}
+
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-primary">Tasks</h1>

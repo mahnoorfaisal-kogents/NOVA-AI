@@ -24,7 +24,8 @@ export function ChatView() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedModel, setSelectedModel] = useState<string | null>(null);
+  const [loadingConversations, setLoadingConversations] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<string | null>(() => typeof window === 'undefined' ? 'nova-auto' : localStorage.getItem('nova-ai-mode') || 'nova-auto');
   const [showModelMenu, setShowModelMenu] = useState(false);
   const [showConvMenu, setShowConvMenu] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -37,30 +38,47 @@ export function ChatView() {
 
   const loadConversations = useCallback(async () => {
     if (!user) return;
-    const { data } = await supabase
+    setLoadingConversations(true);
+    const { data, error: queryError } = await supabase
       .from('conversations')
       .select('*')
       .eq('user_id', user.id)
       .eq('archived', false)
       .order('updated_at', { ascending: false });
-    setConversations(data as Conversation[] ?? []);
+    if (queryError) {
+      setError(queryError.message);
+    } else {
+      setConversations((data as Conversation[] | null) ?? []);
+    }
+    setLoadingConversations(false);
   }, [user]);
 
   const loadMessages = useCallback(async (convId: string) => {
     if (!user) return;
     setLoading(true);
-    const { data } = await supabase
+    const { data, error: queryError } = await supabase
       .from('messages')
       .select('*')
       .eq('conversation_id', convId)
       .order('created_at', { ascending: true });
-    setMessages(data as Message[] ?? []);
+    if (queryError) {
+      setError(queryError.message);
+      setMessages([]);
+    } else {
+      setMessages((data as Message[] | null) ?? []);
+    }
     setLoading(false);
   }, [user]);
 
   useEffect(() => {
     loadConversations();
   }, [loadConversations]);
+
+  useEffect(() => {
+    const onModeChange = (event: Event) => setSelectedModel((event as CustomEvent<string>).detail || 'nova-auto');
+    window.addEventListener('nova-ai-mode-change', onModeChange);
+    return () => window.removeEventListener('nova-ai-mode-change', onModeChange);
+  }, []);
 
   useEffect(() => {
     if (conversationId) {
@@ -94,18 +112,6 @@ export function ChatView() {
     return data.id;
   };
 
-  const recordUsage = async (model: string, provider: string, tokensIn: number, tokensOut: number) => {
-    if (!user) return;
-    await supabase.from('usage_records').insert({
-      user_id: user.id,
-      resource_type: 'chat_message',
-      model,
-      provider,
-      tokens_input: tokensIn,
-      tokens_output: tokensOut,
-    });
-  };
-
   const recordActivity = async (title: string, entityType: string, entityId: string) => {
     if (!user) return;
     await supabase.from('activity_events').insert({
@@ -117,10 +123,9 @@ export function ChatView() {
     });
   };
 
-  const handleSend = async () => {
-    if (!input.trim() || !user || sending) return;
-
-    const messageText = input.trim();
+  const handleSend = async (overrideInput?: string) => {
+    const messageText = (overrideInput ?? input).trim();
+    if (!messageText || !user || sending) return;
     setInput('');
     setError(null);
     setSending(true);
@@ -234,8 +239,6 @@ export function ChatView() {
         status: 'complete',
         tokens: response.tokensOutput,
       });
-
-      await recordUsage(model.id, model.provider, response.tokensInput, response.tokensOutput);
       await recordActivity(`Sent message in conversation`, 'conversation', convId);
     }
 
@@ -257,18 +260,30 @@ export function ChatView() {
   };
 
   const handleDeleteConversation = async (id: string) => {
-    await supabase.from('conversations').delete().eq('id', id);
+    const { error: deleteError } = await supabase.from('conversations').delete().eq('id', id);
+    if (deleteError) {
+      setError(deleteError.message);
+      return;
+    }
     await loadConversations();
     if (conversationId === id) navigate('/chat');
   };
 
   const handleTogglePin = async (id: string, pinned: boolean) => {
-    await supabase.from('conversations').update({ pinned: !pinned }).eq('id', id);
+    const { error: updateError } = await supabase.from('conversations').update({ pinned: !pinned }).eq('id', id);
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
     await loadConversations();
   };
 
   const handleArchive = async (id: string) => {
-    await supabase.from('conversations').update({ archived: true }).eq('id', id);
+    const { error: updateError } = await supabase.from('conversations').update({ archived: true }).eq('id', id);
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
     await loadConversations();
     if (conversationId === id) navigate('/chat');
   };
@@ -282,8 +297,7 @@ export function ChatView() {
       const actualIdx = prev.length - 1 - lastAssistantIdx;
       return prev.filter((_, i) => i !== actualIdx);
     });
-    setInput(lastUserMsg.content);
-    setTimeout(() => handleSend(), 100);
+    void handleSend(lastUserMsg.content);
   };
 
   const handleCopy = (content: string) => {
@@ -303,7 +317,11 @@ export function ChatView() {
           </button>
         </div>
         <div className="flex-1 overflow-y-auto p-2">
-          {conversations.length === 0 ? (
+          {loadingConversations ? (
+            <div className="space-y-2 p-2">
+              {[1, 2, 3, 4].map((i) => <div key={i} className="h-9 shimmer-bg rounded-lg" />)}
+            </div>
+          ) : conversations.length === 0 ? (
             <div className="text-center py-8 text-tertiary text-sm px-4">
               No conversations yet. Start a new chat to begin.
             </div>
@@ -483,7 +501,7 @@ export function ChatView() {
               style={{ minHeight: '48px' }}
             />
             <button
-              onClick={handleSend}
+              onClick={() => void handleSend()}
               disabled={!input.trim() || sending}
               className="p-3 nova-gradient text-white rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 flex-shrink-0"
             >
