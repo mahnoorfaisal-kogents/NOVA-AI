@@ -3,7 +3,7 @@ import { useNavigate } from '@/lib/router';
 import {
   Sparkles, MessageSquare, FolderKanban, FileText, CheckSquare,
   Brain, Bot, Zap, ArrowRight, Activity, Clock, Search, BarChart3,
-  Network, Shield, Gauge, Settings, Lock, Command, Layers3
+  Network, Shield, Gauge, Settings, Lock, Command, Layers3, Plus, Upload, Play, RefreshCw, Cpu, Database, CircleCheck
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -45,6 +45,7 @@ export function HomeView() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [memories, setMemories] = useState<Memory[]>([]);
   const [activity, setActivity] = useState<ActivityEvent[]>([]);
+  const [resourceCounts, setResourceCounts] = useState({ files: 0, agents: 0, automations: 0, notifications: 0, usage: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [commandInput, setCommandInput] = useState('');
@@ -54,15 +55,20 @@ export function HomeView() {
     setLoading(true);
     setError(null);
 
-    const [convRes, projRes, taskRes, memRes, actRes] = await Promise.all([
+    const [convRes, projRes, taskRes, memRes, actRes, fileRes, agentRes, automationRes, notificationRes, usageRes] = await Promise.all([
       supabase.from('conversations').select('*').eq('user_id', user.id).eq('archived', false).order('updated_at', { ascending: false }).limit(5),
       supabase.from('projects').select('*').eq('user_id', user.id).order('updated_at', { ascending: false }).limit(5),
       supabase.from('tasks').select('*').eq('user_id', user.id).neq('status', 'completed').order('created_at', { ascending: false }).limit(5),
       supabase.from('memories').select('*').eq('user_id', user.id).eq('archived', false).order('updated_at', { ascending: false }).limit(5),
       supabase.from('activity_events').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
+      supabase.from('project_files').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+      supabase.from('agents').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+      supabase.from('automations').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+      supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('read', false),
+      supabase.from('usage_records').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
     ]);
 
-    const failures = [convRes, projRes, taskRes, memRes, actRes].map((r) => r.error?.message).filter((m): m is string => Boolean(m));
+    const failures = [convRes, projRes, taskRes, memRes, actRes, fileRes, agentRes, automationRes, notificationRes, usageRes].map((r) => r.error?.message).filter((m): m is string => Boolean(m));
     if (failures.length) setError(failures.join(' • '));
 
     setConversations((convRes.data as Conversation[] | null) ?? []);
@@ -70,6 +76,7 @@ export function HomeView() {
     setTasks((taskRes.data as Task[] | null) ?? []);
     setMemories((memRes.data as Memory[] | null) ?? []);
     setActivity((actRes.data as ActivityEvent[] | null) ?? []);
+    setResourceCounts({ files: fileRes.count ?? 0, agents: agentRes.count ?? 0, automations: automationRes.count ?? 0, notifications: notificationRes.count ?? 0, usage: usageRes.count ?? 0 });
     setLoading(false);
   }, [user]);
 
@@ -93,7 +100,11 @@ export function HomeView() {
     { label: 'Conversations', value: conversations.length, icon: MessageSquare, color: 'text-electric-400', to: '/chat' },
     { label: 'Projects', value: projects.length, icon: FolderKanban, color: 'text-cyan-400', to: '/projects' },
     { label: 'Active Tasks', value: tasks.length, icon: CheckSquare, color: 'text-success-400', to: '/tasks' },
-    { label: 'Memories', value: memories.length, icon: Brain, color: 'text-warning-400', to: '/memory' },
+    { label: 'Files', value: resourceCounts.files, icon: FileText, color: 'text-blue-400', to: '/files' },
+    { label: 'Agents', value: resourceCounts.agents, icon: Bot, color: 'text-purple-400', to: '/agents' },
+    { label: 'Automations', value: resourceCounts.automations, icon: Zap, color: 'text-warning-400', to: '/automations' },
+    { label: 'Memories', value: memories.length, icon: Brain, color: 'text-amber-400', to: '/memory' },
+    { label: 'AI Usage', value: resourceCounts.usage, icon: Gauge, color: 'text-cyan-400', to: '/usage' },
   ];
 
   return (
