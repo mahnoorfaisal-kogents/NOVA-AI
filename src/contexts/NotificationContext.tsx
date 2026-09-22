@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import type { Notification } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './AuthContext';
@@ -71,6 +71,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       setNotifications((prev) => [data as Notification, ...prev]);
     }
   }, [user]);
+
+  useEffect(() => { void refresh(); }, [refresh]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
