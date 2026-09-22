@@ -495,7 +495,7 @@ export function ChatView() {
               style={{ minHeight: '48px' }}
             />
             <button
-              onClick={handleSend}
+              onClick={() => void handleSend()}
               disabled={!input.trim() || sending}
               className="p-3 nova-gradient text-white rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 flex-shrink-0"
             >
