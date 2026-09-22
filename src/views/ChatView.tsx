@@ -25,7 +25,7 @@ export function ChatView() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingConversations, setLoadingConversations] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<string | null>(null);
+  const [selectedModel, setSelectedModel] = useState<string | null>(() => typeof window === 'undefined' ? 'nova-auto' : localStorage.getItem('nova-ai-mode') || 'nova-auto');
   const [showModelMenu, setShowModelMenu] = useState(false);
   const [showConvMenu, setShowConvMenu] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -73,6 +73,12 @@ export function ChatView() {
   useEffect(() => {
     loadConversations();
   }, [loadConversations]);
+
+  useEffect(() => {
+    const onModeChange = (event: Event) => setSelectedModel((event as CustomEvent<string>).detail || 'nova-auto');
+    window.addEventListener('nova-ai-mode-change', onModeChange);
+    return () => window.removeEventListener('nova-ai-mode-change', onModeChange);
+  }, []);
 
   useEffect(() => {
     if (conversationId) {
