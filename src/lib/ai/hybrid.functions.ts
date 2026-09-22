@@ -8,6 +8,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { getPlanLimits } from "@/lib/plans";
+import type { PlanTier } from "@/types";
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const RUNTIME_MODEL = "openai/gpt-6-astra";
@@ -74,7 +75,7 @@ export const novaCloudChat = createServerFn({ method: "POST" })
       return { ...empty, error: "Your NOVA profile could not be verified. Please sign in again." };
     }
 
-    const plan = profile.plan;
+    const plan = profile.plan as PlanTier;
     const limits = getPlanLimits(plan);
     if (!limits.allowed_models.includes(data.model)) {
       return { ...empty, error: "The " + data.model + " mode is not available on your current plan." };
