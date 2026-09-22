@@ -23,6 +23,16 @@ export function TopBar({ onCommandPalette }: TopBarProps) {
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const themeRef = useRef<HTMLDivElement>(null);
+  const modeRef = useRef<HTMLDivElement>(null);
+  const MODES: Array<{ id: string; label: string }> = [
+    { id: 'nova-auto', label: 'Auto' },
+    { id: 'nova-fast', label: 'Fast' },
+    { id: 'nova-reasoning', label: 'Reasoning' },
+    { id: 'nova-coding', label: 'Coding' },
+    { id: 'nova-research', label: 'Research' },
+    { id: 'nova-private', label: 'Private' },
+    { id: 'nova-offline', label: 'Offline' },
+  ];
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
