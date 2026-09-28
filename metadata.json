@@ -1,0 +1,8 @@
+{
+  "name": "NOVA AI",
+  "description": "NOVA is a personal AI workspace with chat, projects, memory, agents, automations and research.",
+  "prompt": "NOVA AI personal workspace",
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
