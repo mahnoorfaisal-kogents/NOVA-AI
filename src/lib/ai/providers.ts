@@ -1,5 +1,6 @@
 import type { ProviderId, ModelInfo } from "@/types";
 import { novaCloudChat } from "@/lib/ai/hybrid.functions";
+import { DEFAULT_OLLAMA_URL as SAFE_DEFAULT_OLLAMA_URL, normalizeOllamaUrl } from "@/lib/ai/local-runtime";
 
 export interface ChatMessage {
   role: "user" | "assistant" | "system";
@@ -33,7 +34,7 @@ const DEFAULT_SYSTEM_PROMPT =
 
 const OLLAMA_URL_KEY = "nova.ollama.baseUrl";
 const OLLAMA_MODEL_KEY = "nova.ollama.model";
-export const DEFAULT_OLLAMA_URL = "http://localhost:11434";
+export const DEFAULT_OLLAMA_URL = SAFE_DEFAULT_OLLAMA_URL;
 export const DEFAULT_OLLAMA_MODEL = "llama3.1";
 
 export function getOllamaSettings(): { baseUrl: string; model: string } {
@@ -41,14 +42,14 @@ export function getOllamaSettings(): { baseUrl: string; model: string } {
     return { baseUrl: DEFAULT_OLLAMA_URL, model: DEFAULT_OLLAMA_MODEL };
   }
   return {
-    baseUrl: window.localStorage.getItem(OLLAMA_URL_KEY) || DEFAULT_OLLAMA_URL,
+    baseUrl: normalizeOllamaUrl(window.localStorage.getItem(OLLAMA_URL_KEY)),
     model: window.localStorage.getItem(OLLAMA_MODEL_KEY) || DEFAULT_OLLAMA_MODEL,
   };
 }
 
 export function setOllamaSettings(settings: { baseUrl: string; model: string }): void {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(OLLAMA_URL_KEY, settings.baseUrl);
+  window.localStorage.setItem(OLLAMA_URL_KEY, normalizeOllamaUrl(settings.baseUrl));
   window.localStorage.setItem(OLLAMA_MODEL_KEY, settings.model);
 }
 
@@ -63,7 +64,7 @@ export interface LocalStatus {
  * are already installed. Nothing is ever downloaded automatically.
  */
 export async function checkLocalAI(baseUrl?: string): Promise<LocalStatus> {
-  const url = (baseUrl ?? getOllamaSettings().baseUrl).replace(/\/$/, "");
+  const url = normalizeOllamaUrl(baseUrl ?? getOllamaSettings().baseUrl);
   try {
     const response = await fetch(`${url}/api/tags`);
     if (!response.ok) {
@@ -113,7 +114,7 @@ export async function pullLocalModel(
   onProgress?: (progress: PullProgress) => void,
   signal?: AbortSignal,
 ): Promise<{ ok: boolean; error: string | null }> {
-  const url = (baseUrl ?? getOllamaSettings().baseUrl).replace(/\/$/, "");
+  const url = normalizeOllamaUrl(baseUrl ?? getOllamaSettings().baseUrl);
   try {
     const response = await fetch(`${url}/api/pull`, {
       method: "POST",
@@ -239,7 +240,8 @@ class OllamaProvider implements AIProvider {
   name = "On this device";
 
   async chat(messages: ChatMessage[], model: string, options?: ChatOptions): Promise<AIResponse> {
-    const { baseUrl, model: configuredModel } = getOllamaSettings();
+    const { baseUrl: configuredBaseUrl, model: configuredModel } = getOllamaSettings();
+    const baseUrl = normalizeOllamaUrl(configuredBaseUrl);
     const localModel = model.startsWith("nova-") ? configuredModel : model;
     const fail = (error: string): AIResponse => ({
       content: "",
@@ -251,7 +253,7 @@ class OllamaProvider implements AIProvider {
     });
 
     try {
-      const response = await fetch(`${baseUrl.replace(/\/$/, "")}/api/chat`, {
+      const response = await fetch(`${baseUrl}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
