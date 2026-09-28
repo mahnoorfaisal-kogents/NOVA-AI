@@ -40,10 +40,11 @@ function createSupabaseClient() {
     import.meta.env["VITE_SUPABASE_PUBLISHABLE_KEY"] || process.env["SUPABASE_PUBLISHABLE_KEY"];
 
   if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-    console.warn(
-      "[Supabase] Environment variables missing. Running with in-memory / local storage client.",
-    );
-    return createMockSupabaseClient() as ReturnType<typeof createClient<Database>>;
+    if (import.meta.env.DEV) {
+      console.warn("[Supabase] Environment variables missing. Using the development-only mock client.");
+      return createMockSupabaseClient() as ReturnType<typeof createClient<Database>>;
+    }
+    throw new Error("Supabase is not configured for this production build.");
   }
 
   return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
