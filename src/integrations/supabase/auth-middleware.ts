@@ -37,13 +37,7 @@ export const requireSupabaseAuth = createMiddleware({ type: "function" }).server
     const SUPABASE_PUBLISHABLE_KEY = process.env["SUPABASE_PUBLISHABLE_KEY"];
 
     if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-      return next({
-        context: {
-          supabase: null as any,
-          userId: "demo-user-nova",
-          claims: { sub: "demo-user-nova", email: "demo@nova.ai" as string | undefined } as any,
-        },
-      });
+      throw new Error("Server authentication is not configured: SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY are required.");
     }
 
     const request = getRequest();
