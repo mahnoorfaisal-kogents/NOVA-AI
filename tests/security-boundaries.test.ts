@@ -26,3 +26,28 @@ test("Ollama boundary: rejects credentials embedded in the endpoint", () => {
 test("Ollama boundary: rejects unsupported protocols", () => {
   assert.equal(isLoopbackOllamaUrl("ftp://localhost:11434"), false);
 });
+
+import { readFileSync } from "node:fs";
+
+test("Server security: production auth middleware does not mint a demo identity", () => {
+  const source = readFileSync("src/integrations/supabase/auth-middleware.ts", "utf8");
+  assert.doesNotMatch(source, /demo-user-nova/);
+  assert.match(source, /Server authentication is not configured/);
+});
+
+test("Server security: admin client fails closed instead of returning a fake client", () => {
+  const source = readFileSync("src/integrations/supabase/client.server.ts", "utf8");
+  assert.doesNotMatch(source, /mock admin client/i);
+  assert.match(source, /Server Supabase admin client is not configured/);
+});
+
+test("Cloud boundary: Gemini SDK and API key fallback are absent", () => {
+  const source = readFileSync("src/lib/ai/hybrid.functions.ts", "utf8");
+  assert.doesNotMatch(source, /GoogleGenAI|GEMINI_API_KEY/);
+});
+
+test("Production browser boundary: mock Supabase client is development-gated", () => {
+  const source = readFileSync("src/integrations/supabase/client.ts", "utf8");
+  assert.match(source, /import\.meta\.env\.DEV/);
+  assert.match(source, /production build/);
+});
