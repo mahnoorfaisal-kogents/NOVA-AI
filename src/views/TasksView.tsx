@@ -1,20 +1,20 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Plus, CheckSquare, Trash2, Calendar, Flag, MoreHorizontal } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
-import type { Task, TaskStatus, TaskPriority } from '@/types';
+import { useState, useEffect, useCallback } from "react";
+import { Plus, CheckSquare, Trash2, Calendar, Flag, MoreHorizontal } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
+import type { Task, TaskStatus, TaskPriority } from "@/types";
 
 const STATUS_LABELS: Record<TaskStatus, string> = {
-  todo: 'To Do',
-  in_progress: 'In Progress',
-  completed: 'Completed',
+  todo: "To Do",
+  in_progress: "In Progress",
+  completed: "Completed",
 };
 
 const PRIORITY_COLORS: Record<TaskPriority, string> = {
-  low: 'bg-tertiary',
-  medium: 'bg-electric-500',
-  high: 'bg-warning-500',
-  urgent: 'bg-error-500',
+  low: "bg-tertiary",
+  medium: "bg-electric-500",
+  high: "bg-warning-500",
+  urgent: "bg-error-500",
 };
 
 export function TasksView() {
@@ -22,54 +22,65 @@ export function TasksView() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
-  const [newTitle, setNewTitle] = useState('');
-  const [newPriority, setNewPriority] = useState<TaskPriority>('medium');
-  const [filter, setFilter] = useState<TaskStatus | 'all'>('all');
+  const [newTitle, setNewTitle] = useState("");
+  const [newPriority, setNewPriority] = useState<TaskPriority>("medium");
+  const [filter, setFilter] = useState<TaskStatus | "all">("all");
 
   const load = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const { data } = await supabase.from('tasks').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
-    setTasks(data as Task[] ?? []);
+    const { data } = await supabase
+      .from("tasks")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+    setTasks((data as Task[]) ?? []);
     setLoading(false);
   }, [user]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !newTitle.trim()) return;
-    const { data } = await supabase.from('tasks').insert({
-      user_id: user.id,
-      title: newTitle.trim(),
-      priority: newPriority,
-    }).select('*').maybeSingle();
+    const { data } = await supabase
+      .from("tasks")
+      .insert({
+        user_id: user.id,
+        title: newTitle.trim(),
+        priority: newPriority,
+      })
+      .select("*")
+      .maybeSingle();
     if (data) {
       setTasks((prev) => [data as Task, ...prev]);
-      setNewTitle('');
-      setNewPriority('medium');
+      setNewTitle("");
+      setNewPriority("medium");
       setShowCreate(false);
     }
   };
 
   const toggleStatus = async (task: Task) => {
-    const newStatus = task.status === 'completed' ? 'todo' : task.status === 'todo' ? 'in_progress' : 'completed';
-    await supabase.from('tasks').update({ status: newStatus }).eq('id', task.id);
-    setTasks((prev) => prev.map((t) => t.id === task.id ? { ...t, status: newStatus } : t));
+    const newStatus =
+      task.status === "completed" ? "todo" : task.status === "todo" ? "in_progress" : "completed";
+    await supabase.from("tasks").update({ status: newStatus }).eq("id", task.id);
+    setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: newStatus } : t)));
   };
 
   const handleDelete = async (id: string) => {
-    await supabase.from('tasks').delete().eq('id', id);
+    await supabase.from("tasks").delete().eq("id", id);
     setTasks((prev) => prev.filter((t) => t.id !== id));
   };
 
-  const filtered = filter === 'all' ? tasks : tasks.filter((t) => t.status === filter);
+  const filtered = filter === "all" ? tasks : tasks.filter((t) => t.status === filter);
 
   const counts = {
     all: tasks.length,
-    todo: tasks.filter((t) => t.status === 'todo').length,
-    in_progress: tasks.filter((t) => t.status === 'in_progress').length,
-    completed: tasks.filter((t) => t.status === 'completed').length,
+    todo: tasks.filter((t) => t.status === "todo").length,
+    in_progress: tasks.filter((t) => t.status === "in_progress").length,
+    completed: tasks.filter((t) => t.status === "completed").length,
   };
 
   return (
@@ -77,7 +88,9 @@ export function TasksView() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-primary">Tasks</h1>
-          <p className="text-sm text-secondary mt-1">Manage your to-dos, in-progress work, and completed items</p>
+          <p className="text-sm text-secondary mt-1">
+            Manage your to-dos, in-progress work, and completed items
+          </p>
         </div>
         <button
           onClick={() => setShowCreate(!showCreate)}
@@ -88,7 +101,10 @@ export function TasksView() {
       </div>
 
       {showCreate && (
-        <form onSubmit={handleCreate} className="mb-6 glass-strong rounded-xl p-4 space-y-3 animate-fade-in-up">
+        <form
+          onSubmit={handleCreate}
+          className="mb-6 glass-strong rounded-xl p-4 space-y-3 animate-fade-in-up"
+        >
           <input
             type="text"
             value={newTitle}
@@ -108,28 +124,43 @@ export function TasksView() {
               <option value="high">High Priority</option>
               <option value="urgent">Urgent</option>
             </select>
-            <button type="submit" className="px-4 py-2 nova-gradient text-white rounded-lg text-sm font-medium hover:opacity-90">Add</button>
-            <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 bg-tertiary text-secondary rounded-lg text-sm hover:text-primary">Cancel</button>
+            <button
+              type="submit"
+              className="px-4 py-2 nova-gradient text-white rounded-lg text-sm font-medium hover:opacity-90"
+            >
+              Add
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowCreate(false)}
+              className="px-4 py-2 bg-tertiary text-secondary rounded-lg text-sm hover:text-primary"
+            >
+              Cancel
+            </button>
           </div>
         </form>
       )}
 
       <div className="flex gap-1 mb-4 p-1 bg-tertiary rounded-lg w-fit">
-        {(['all', 'todo', 'in_progress', 'completed'] as const).map((f) => (
+        {(["all", "todo", "in_progress", "completed"] as const).map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
             className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-              filter === f ? 'bg-electric-500 text-white' : 'text-secondary hover:text-primary'
+              filter === f ? "bg-electric-500 text-white" : "text-secondary hover:text-primary"
             }`}
           >
-            {f === 'all' ? 'All' : STATUS_LABELS[f]} ({counts[f]})
+            {f === "all" ? "All" : STATUS_LABELS[f]} ({counts[f]})
           </button>
         ))}
       </div>
 
       {loading ? (
-        <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="h-12 shimmer-bg rounded-lg" />)}</div>
+        <div className="space-y-2">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-12 shimmer-bg rounded-lg" />
+          ))}
+        </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16">
           <CheckSquare className="w-12 h-12 text-tertiary mx-auto mb-3" />
@@ -138,30 +169,41 @@ export function TasksView() {
       ) : (
         <div className="space-y-1">
           {filtered.map((task) => (
-            <div key={task.id} className="group flex items-center gap-3 glass rounded-lg px-4 py-3 hover:border-electric-500/20 transition-colors">
+            <div
+              key={task.id}
+              className="group flex items-center gap-3 glass rounded-lg px-4 py-3 hover:border-electric-500/20 transition-colors"
+            >
               <button
                 onClick={() => toggleStatus(task)}
                 className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                  task.status === 'completed' ? 'bg-success-500 border-success-500' : 'border-subtle hover:border-electric-500'
+                  task.status === "completed"
+                    ? "bg-success-500 border-success-500"
+                    : "border-subtle hover:border-electric-500"
                 }`}
               >
-                {task.status === 'completed' && <CheckSquare className="w-3 h-3 text-white" />}
+                {task.status === "completed" && <CheckSquare className="w-3 h-3 text-white" />}
               </button>
               <div className="flex-1 min-w-0">
-                <p className={`text-sm ${task.status === 'completed' ? 'text-tertiary line-through' : 'text-primary'}`}>
+                <p
+                  className={`text-sm ${task.status === "completed" ? "text-tertiary line-through" : "text-primary"}`}
+                >
                   {task.title}
                 </p>
                 <div className="flex items-center gap-3 mt-0.5">
                   <span className="text-xs text-tertiary">{STATUS_LABELS[task.status]}</span>
                   {task.due_date && (
                     <span className="text-xs text-tertiary flex items-center gap-1">
-                      <Calendar className="w-3 h-3" /> {new Date(task.due_date).toLocaleDateString()}
+                      <Calendar className="w-3 h-3" />{" "}
+                      {new Date(task.due_date).toLocaleDateString()}
                     </span>
                   )}
                   {task.ai_created && <span className="text-xs text-electric-400">AI</span>}
                 </div>
               </div>
-              <div className={`w-2 h-2 rounded-full ${PRIORITY_COLORS[task.priority]} flex-shrink-0`} title={task.priority} />
+              <div
+                className={`w-2 h-2 rounded-full ${PRIORITY_COLORS[task.priority]} flex-shrink-0`}
+                title={task.priority}
+              />
               <button
                 onClick={() => handleDelete(task.id)}
                 className="p-1 opacity-0 group-hover:opacity-100 text-tertiary hover:text-error-400 transition-all"

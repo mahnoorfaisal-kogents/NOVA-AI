@@ -1,14 +1,14 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { FileText, Trash2, Upload, Search, File, FileCode, FileSpreadsheet } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
-import type { ProjectFile } from '@/types';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { FileText, Trash2, Upload, Search, File, FileCode, FileSpreadsheet } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
+import type { ProjectFile } from "@/types";
 
 export function FilesView() {
   const { user } = useAuth();
   const [files, setFiles] = useState<ProjectFile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -16,26 +16,51 @@ export function FilesView() {
   const load = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const { data } = await supabase.from('project_files').select('*').eq('user_id', user.id).eq('deleted', false).order('created_at', { ascending: false });
-    setFiles(data as ProjectFile[] ?? []);
+    const { data } = await supabase
+      .from("project_files")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("deleted", false)
+      .order("created_at", { ascending: false });
+    setFiles((data as ProjectFile[]) ?? []);
     setLoading(false);
   }, [user]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const handleFileUpload = async (fileList: FileList | null) => {
     if (!fileList || !user) return;
     setUploading(true);
 
     for (const file of Array.from(fileList)) {
-      const ext = file.name.split('.').pop()?.toLowerCase() ?? 'txt';
+      const ext = file.name.split(".").pop()?.toLowerCase() ?? "txt";
       let contentText: string | null = null;
 
-      if (file.type.startsWith('text/') || ['txt', 'md', 'json', 'csv', 'js', 'ts', 'jsx', 'tsx', 'py', 'html', 'css', 'xml', 'yaml', 'yml'].includes(ext)) {
+      if (
+        file.type.startsWith("text/") ||
+        [
+          "txt",
+          "md",
+          "json",
+          "csv",
+          "js",
+          "ts",
+          "jsx",
+          "tsx",
+          "py",
+          "html",
+          "css",
+          "xml",
+          "yaml",
+          "yml",
+        ].includes(ext)
+      ) {
         contentText = await file.text();
       }
 
-      await supabase.from('project_files').insert({
+      await supabase.from("project_files").insert({
         user_id: user.id,
         name: file.name,
         file_type: ext,
@@ -51,13 +76,18 @@ export function FilesView() {
   };
 
   const handleDelete = async (id: string) => {
-    await supabase.from('project_files').update({ deleted: true }).eq('id', id);
+    await supabase.from("project_files").update({ deleted: true }).eq("id", id);
     setFiles((prev) => prev.filter((f) => f.id !== id));
   };
 
   const getFileIcon = (fileType: string) => {
-    if (['js', 'ts', 'jsx', 'tsx', 'py', 'html', 'css', 'json', 'xml', 'yaml', 'yml'].includes(fileType)) return FileCode;
-    if (['csv', 'xlsx', 'xls'].includes(fileType)) return FileSpreadsheet;
+    if (
+      ["js", "ts", "jsx", "tsx", "py", "html", "css", "json", "xml", "yaml", "yml"].includes(
+        fileType,
+      )
+    )
+      return FileCode;
+    if (["csv", "xlsx", "xls"].includes(fileType)) return FileSpreadsheet;
     return File;
   };
 
@@ -67,7 +97,9 @@ export function FilesView() {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  const filtered = files.filter((f) => !searchQuery || f.name.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filtered = files.filter(
+    (f) => !searchQuery || f.name.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-8 animate-fade-in">
@@ -95,17 +127,26 @@ export function FilesView() {
 
       <div
         className={`mb-6 border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
-          dragOver ? 'border-electric-500 bg-electric-500/5' : 'border-subtle'
+          dragOver ? "border-electric-500 bg-electric-500/5" : "border-subtle"
         }`}
-        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
         onDragLeave={() => setDragOver(false)}
-        onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFileUpload(e.dataTransfer.files); }}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragOver(false);
+          handleFileUpload(e.dataTransfer.files);
+        }}
       >
         <Upload className="w-8 h-8 text-tertiary mx-auto mb-2" />
         <p className="text-sm text-secondary">
-          {uploading ? 'Uploading...' : 'Drag and drop files here, or click Upload'}
+          {uploading ? "Uploading..." : "Drag and drop files here, or click Upload"}
         </p>
-        <p className="text-xs text-tertiary mt-1">Text, code, markdown, CSV, JSON files are indexed for search</p>
+        <p className="text-xs text-tertiary mt-1">
+          Text, code, markdown, CSV, JSON files are indexed for search
+        </p>
       </div>
 
       <div className="relative mb-4">
@@ -120,18 +161,29 @@ export function FilesView() {
       </div>
 
       {loading ? (
-        <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="h-14 shimmer-bg rounded-lg" />)}</div>
+        <div className="space-y-2">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-14 shimmer-bg rounded-lg" />
+          ))}
+        </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16">
           <FileText className="w-12 h-12 text-tertiary mx-auto mb-3" />
-          <p className="text-secondary text-sm">{searchQuery ? 'No files match your search.' : 'No files yet. Upload some to get started.'}</p>
+          <p className="text-secondary text-sm">
+            {searchQuery
+              ? "No files match your search."
+              : "No files yet. Upload some to get started."}
+          </p>
         </div>
       ) : (
         <div className="space-y-1">
           {filtered.map((file) => {
             const Icon = getFileIcon(file.file_type);
             return (
-              <div key={file.id} className="group flex items-center gap-3 glass rounded-lg px-4 py-3 hover:border-electric-500/20 transition-colors">
+              <div
+                key={file.id}
+                className="group flex items-center gap-3 glass rounded-lg px-4 py-3 hover:border-electric-500/20 transition-colors"
+              >
                 <div className="w-9 h-9 rounded-lg bg-tertiary flex items-center justify-center flex-shrink-0">
                   <Icon className="w-4 h-4 text-electric-400" />
                 </div>

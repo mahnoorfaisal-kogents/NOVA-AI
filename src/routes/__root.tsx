@@ -48,9 +48,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-app px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-primary">
-          This page didn't load
-        </h1>
+        <h1 className="text-xl font-semibold tracking-tight text-primary">This page didn't load</h1>
         <p className="mt-2 text-sm text-secondary">
           Something went wrong on our end. You can try refreshing or head back home.
         </p>
@@ -129,10 +127,10 @@ function NovaBooting() {
 }
 
 function AppShell() {
-  const { user, loading } = useAuth();
+  const { user, loading, authState } = useAuth();
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
 
-  if (loading) return <NovaBooting />;
+  if (loading || authState === "INITIALIZING") return <NovaBooting />;
   if (!user) return <AuthScreen />;
 
   return (

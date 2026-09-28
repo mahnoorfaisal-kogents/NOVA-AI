@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from '@/lib/router';
-import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, Sparkles } from 'lucide-react';
+import { useEffect, useState } from "react";
+import { useNavigate } from "@/lib/router";
+import { useAuth } from "@/contexts/AuthContext";
+import { Loader2, Sparkles } from "lucide-react";
 
 export function LoadingScreen() {
   return (
@@ -27,7 +27,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!loading) {
       if (!user) {
-        navigate('/auth', { replace: true });
+        navigate("/auth", { replace: true });
       }
       setShowLoading(false);
     }

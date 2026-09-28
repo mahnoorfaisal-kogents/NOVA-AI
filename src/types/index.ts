@@ -1,74 +1,86 @@
-export type PlanTier = 'free' | 'pro' | 'ultimate';
+export type PlanTier = "free" | "pro" | "ultimate";
+
+export type AuthState =
+  | "INITIALIZING"
+  | "UNAUTHENTICATED"
+  | "SIGNING_UP"
+  | "AWAITING_EMAIL_CONFIRMATION"
+  | "AUTHENTICATED"
+  | "SIGNING_IN"
+  | "SIGNING_OUT"
+  | "ERROR";
 
 export type PersonalityType =
-  | 'professional'
-  | 'concise'
-  | 'detailed'
-  | 'technical'
-  | 'creative'
-  | 'friendly'
-  | 'analytical'
-  | 'custom';
+  | "professional"
+  | "concise"
+  | "detailed"
+  | "technical"
+  | "creative"
+  | "friendly"
+  | "analytical"
+  | "custom";
 
 export type AgentType =
-  | 'general'
-  | 'research'
-  | 'coding'
-  | 'writing'
-  | 'data_analysis'
-  | 'planning'
-  | 'productivity'
-  | 'file_analyst'
-  | 'security'
-  | 'automation'
-  | 'verification';
+  | "general"
+  | "research"
+  | "coding"
+  | "writing"
+  | "data_analysis"
+  | "planning"
+  | "productivity"
+  | "file_analyst"
+  | "security"
+  | "automation"
+  | "verification";
 
-export type AgentStatus = 'idle' | 'planning' | 'executing' | 'waiting_approval' | 'completed' | 'failed' | 'cancelled';
+export type AgentStatus =
+  "idle" | "planning" | "executing" | "waiting_approval" | "completed" | "failed" | "cancelled";
 
-export type TaskStatus = 'todo' | 'in_progress' | 'completed';
-export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
+export type TaskStatus = "todo" | "in_progress" | "completed";
+export type TaskPriority = "low" | "medium" | "high" | "urgent";
 
 export type MemoryCategory =
-  | 'personal'
-  | 'preferences'
-  | 'work'
-  | 'technical'
-  | 'projects'
-  | 'goals'
-  | 'instructions'
-  | 'important_facts'
-  | 'temporary';
+  | "personal"
+  | "preferences"
+  | "work"
+  | "technical"
+  | "projects"
+  | "goals"
+  | "instructions"
+  | "important_facts"
+  | "temporary";
 
-export type MessageRole = 'user' | 'assistant' | 'system';
-export type MessageStatus = 'pending' | 'sent' | 'streaming' | 'complete' | 'error';
+export type MessageRole = "user" | "assistant" | "system";
+export type MessageStatus = "pending" | "sent" | "streaming" | "complete" | "error";
 
-export type AutomationTrigger = 'schedule' | 'task_event' | 'file_event' | 'project_event' | 'user_command';
+export type AutomationTrigger =
+  "schedule" | "task_event" | "file_event" | "project_event" | "user_command";
 export type AutomationActionType =
-  | 'ai_invocation'
-  | 'task_creation'
-  | 'task_update'
-  | 'memory_update'
-  | 'notification'
-  | 'file_processing';
+  | "ai_invocation"
+  | "task_creation"
+  | "task_update"
+  | "memory_update"
+  | "notification"
+  | "file_processing";
 
-export type PermissionLevel = 'safe' | 'confirm' | 'high_risk';
-export type PermissionDecision = 'always_allow' | 'ask_every_time' | 'allow_once' | 'deny';
+export type PermissionLevel = "safe" | "confirm" | "high_risk";
+export type PermissionDecision = "always_allow" | "ask_every_time" | "allow_once" | "deny";
 
 /**
  * Hybrid AI: cloud answers come from NOVA's own backend on the managed AI
  * runtime; local answers run on the user's own machine via Ollama.
  */
-export type ProviderId = 'nova_cloud' | 'ollama';
+export type ProviderId = "nova_cloud" | "ollama";
 
 export type ModelCapability =
-  | 'general'
-  | 'reasoning'
-  | 'coding'
-  | 'vision'
-  | 'long_context'
-  | 'fast'
-  | 'structured_output'
-  | 'multimodal';
+  | "general"
+  | "reasoning"
+  | "coding"
+  | "vision"
+  | "long_context"
+  | "fast"
+  | "structured_output"
+  | "multimodal";
 
 export interface UserProfile {
   id: string;
@@ -226,7 +238,7 @@ export interface AutomationRun {
   id: string;
   user_id: string;
   automation_id: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  status: "pending" | "running" | "completed" | "failed";
   result: string | null;
   error: string | null;
   created_at: string;
@@ -319,7 +331,7 @@ export interface ApprovalRequest {
   action: string;
   description: string;
   data_involved: string | null;
-  status: 'pending' | 'approved' | 'denied' | 'expired';
+  status: "pending" | "approved" | "denied" | "expired";
   created_at: string;
   resolved_at: string | null;
 }

@@ -6,8 +6,7 @@
  * because the NOVA tables carry their own hand-written row types in
  * `src/types` rather than generated database types.
  */
-import { supabase as generatedClient } from "@/integrations/supabase/client";
+import { supabase as generatedClient } from "../integrations/supabase/client.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const supabase = generatedClient as unknown as SupabaseClient<any, "public", any>;

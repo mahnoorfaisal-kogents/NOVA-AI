@@ -10,6 +10,7 @@
  */
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createServerFn } from "@tanstack/react-start";
+import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
@@ -60,7 +61,9 @@ export const novaCloudChat = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => ChatInput.parse(input))
   .handler(async ({ data }) => {
-    const apiKey = process.env["LOVABLE_API_KEY"];
+    const lovableApiKey = process.env["LOVABLE_API_KEY"];
+    const geminiApiKey = process.env["GEMINI_API_KEY"];
+
     const empty = {
       content: "",
       tokensInput: 0,
@@ -69,63 +72,112 @@ export const novaCloudChat = createServerFn({ method: "POST" })
       provider: "nova_cloud" as const,
     };
 
-    if (!apiKey) {
+    if (!lovableApiKey && !geminiApiKey) {
       return { ...empty, error: "NOVA's AI runtime is not available in this environment." };
     }
 
-    const upstreamModel = RUNTIME_MODEL;
-    const effort = MODE_EFFORT[data.model] ?? MODE_EFFORT[DEFAULT_MODE]!;
+    // Prioritize Lovable Gateway if key is present
+    if (lovableApiKey) {
+      const upstreamModel = RUNTIME_MODEL;
+      const effort = MODE_EFFORT[data.model] ?? MODE_EFFORT[DEFAULT_MODE]!;
 
-    try {
-      const response = await fetch(GATEWAY_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Lovable-API-Key": apiKey,
-          "X-Lovable-AIG-SDK": "fetch",
-        },
-        body: JSON.stringify({
-          model: upstreamModel,
-          messages: data.messages,
-          reasoning_effort: effort,
-          max_completion_tokens: data.maxTokens ?? 4000,
-        }),
-      });
+      try {
+        const response = await fetch(GATEWAY_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Lovable-API-Key": lovableApiKey,
+            "X-Lovable-AIG-SDK": "fetch",
+          },
+          body: JSON.stringify({
+            model: upstreamModel,
+            messages: data.messages,
+            reasoning_effort: effort,
+            max_completion_tokens: data.maxTokens ?? 4000,
+          }),
+        });
 
-      if (!response.ok) {
-        const detail = await response.text();
-        let message = detail.slice(0, 400);
-        try {
-          const parsed = JSON.parse(detail) as { error?: { message?: string }; message?: string };
-          message = parsed.error?.message ?? parsed.message ?? message;
-        } catch {
-          /* keep raw text */
+        if (!response.ok) {
+          const detail = await response.text();
+          let message = detail.slice(0, 400);
+          try {
+            const parsed = JSON.parse(detail) as { error?: { message?: string }; message?: string };
+            message = parsed.error?.message ?? parsed.message ?? message;
+          } catch {
+            /* keep raw text */
+          }
+          return { ...empty, error: friendlyError(response.status, message) };
         }
-        return { ...empty, error: friendlyError(response.status, message) };
+
+        const body = (await response.json()) as {
+          choices?: Array<{ message?: { content?: string } }>;
+          usage?: { prompt_tokens?: number; completion_tokens?: number };
+        };
+
+        return {
+          content: body.choices?.[0]?.message?.content ?? "",
+          tokensInput: body.usage?.prompt_tokens ?? 0,
+          tokensOutput: body.usage?.completion_tokens ?? 0,
+          upstreamModel,
+          provider: "nova_cloud" as const,
+          error: null as string | null,
+        };
+      } catch (err) {
+        return {
+          ...empty,
+          error: err instanceof Error ? err.message : "Cloud AI request failed",
+        };
       }
-
-      const body = (await response.json()) as {
-        choices?: Array<{ message?: { content?: string } }>;
-        usage?: { prompt_tokens?: number; completion_tokens?: number };
-      };
-
-      return {
-        content: body.choices?.[0]?.message?.content ?? "",
-        tokensInput: body.usage?.prompt_tokens ?? 0,
-        tokensOutput: body.usage?.completion_tokens ?? 0,
-        upstreamModel,
-        provider: "nova_cloud" as const,
-        error: null as string | null,
-      };
-    } catch (err) {
-      return {
-        ...empty,
-        error: err instanceof Error ? err.message : "Cloud AI request failed",
-      };
     }
+
+    // Google AI Studio runtime with Gemini API
+    if (geminiApiKey) {
+      try {
+        const ai = new GoogleGenAI();
+        const isPro = data.model === "nova-reasoning" || data.model === "nova-research";
+        const targetModel = isPro ? "gemini-2.5-pro" : "gemini-2.5-flash";
+
+        const systemMessage = data.messages.find((m) => m.role === "system")?.content;
+        const nonSystemMessages = data.messages.filter((m) => m.role !== "system");
+
+        const contents = nonSystemMessages.map((m) => ({
+          role: m.role === "assistant" ? "model" : "user",
+          parts: [{ text: m.content }],
+        }));
+
+        const response = await ai.models.generateContent({
+          model: targetModel,
+          contents,
+          config: {
+            systemInstruction: systemMessage,
+            temperature: data.temperature ?? (isPro ? 0.4 : 0.7),
+            maxOutputTokens: data.maxTokens ?? 4000,
+          },
+        });
+
+        return {
+          content: response.text ?? "",
+          tokensInput: response.usageMetadata?.promptTokenCount ?? 0,
+          tokensOutput: response.usageMetadata?.candidatesTokenCount ?? 0,
+          upstreamModel: targetModel,
+          provider: "nova_cloud" as const,
+          error: null as string | null,
+        };
+      } catch (err: any) {
+        console.error("[NOVA Cloud] Gemini generation error:", err);
+        return {
+          ...empty,
+          error: err instanceof Error ? err.message : "Failed to generate answer with Gemini",
+        };
+      }
+    }
+
+    return { ...empty, error: "No available AI provider configured." };
   });
 
 /** Confirms the managed runtime is available. No keys, no providers exposed. */
 export const novaCloudStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async () => ({ available: Boolean(process.env["LOVABLE_API_KEY"]) }));
+  .handler(async () => ({
+    available: Boolean(process.env["LOVABLE_API_KEY"] || process.env["GEMINI_API_KEY"]),
+  }));

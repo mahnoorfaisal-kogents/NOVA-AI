@@ -1,4 +1,4 @@
-import type { PlanTier, PlanInfo, PlanLimits } from '@/types';
+import type { PlanTier, PlanInfo, PlanLimits } from "@/types";
 
 export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
   free: {
@@ -11,7 +11,7 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     max_tasks: 50,
     max_agents: 3,
     max_automations: 2,
-    allowed_models: ['nova-auto', 'nova-fast', 'nova-private', 'nova-offline'],
+    allowed_models: ["nova-auto", "nova-fast", "nova-private", "nova-offline"],
     coding: false,
     research: false,
     data_analysis: false,
@@ -31,7 +31,15 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     max_tasks: 500,
     max_agents: 15,
     max_automations: 25,
-    allowed_models: ['nova-auto', 'nova-fast', 'nova-reasoning', 'nova-coding', 'nova-research', 'nova-private', 'nova-offline'],
+    allowed_models: [
+      "nova-auto",
+      "nova-fast",
+      "nova-reasoning",
+      "nova-coding",
+      "nova-research",
+      "nova-private",
+      "nova-offline",
+    ],
     coding: true,
     research: true,
     data_analysis: true,
@@ -52,8 +60,13 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     max_agents: 50,
     max_automations: 100,
     allowed_models: [
-      'nova-auto', 'nova-fast', 'nova-reasoning', 'nova-coding',
-      'nova-research', 'nova-private', 'nova-offline',
+      "nova-auto",
+      "nova-fast",
+      "nova-reasoning",
+      "nova-coding",
+      "nova-research",
+      "nova-private",
+      "nova-offline",
     ],
     coding: true,
     research: true,
@@ -68,56 +81,56 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
 
 export const PLANS: Record<PlanTier, PlanInfo> = {
   free: {
-    tier: 'free',
-    name: 'NOVA Free',
-    description: 'Your starter AI companion with essential intelligence.',
+    tier: "free",
+    name: "NOVA Free",
+    description: "Your starter AI companion with essential intelligence.",
     limits: PLAN_LIMITS.free,
     features: [
-      'Basic AI chat with conversation history',
-      'Personal memory (up to 100 items)',
-      'Up to 3 projects',
-      'Basic task management',
-      '3 specialized agents',
-      '2 automations',
-      'Standard AI models',
+      "Basic AI chat with conversation history",
+      "Personal memory (up to 100 items)",
+      "Up to 3 projects",
+      "Basic task management",
+      "3 specialized agents",
+      "2 automations",
+      "Standard AI models",
     ],
     price_monthly: 0,
   },
   pro: {
-    tier: 'pro',
-    name: 'NOVA Pro',
-    description: 'Your daily professional AI workspace.',
+    tier: "pro",
+    name: "NOVA Pro",
+    description: "Your daily professional AI workspace.",
     limits: PLAN_LIMITS.pro,
     features: [
-      '500 messages per day',
-      'Advanced memory (1,000 items)',
-      'Coding & research assistants',
-      'Data analysis tools',
-      '15 specialized agents',
-      '25 automations',
-      'Voice & multimodal input',
-      'File versioning',
-      'Advanced model routing',
-      '500MB file storage',
+      "500 messages per day",
+      "Advanced memory (1,000 items)",
+      "Coding & research assistants",
+      "Data analysis tools",
+      "15 specialized agents",
+      "25 automations",
+      "Voice & multimodal input",
+      "File versioning",
+      "Advanced model routing",
+      "500MB file storage",
     ],
     price_monthly: 20,
   },
   ultimate: {
-    tier: 'ultimate',
-    name: 'NOVA Ultimate',
-    description: 'The complete personal AI operating system.',
+    tier: "ultimate",
+    name: "NOVA Ultimate",
+    description: "The complete personal AI operating system.",
     limits: PLAN_LIMITS.ultimate,
     features: [
-      '2,000 messages per day',
-      'Maximum memory (10,000 items)',
-      'All advanced agents & automations',
-      'Knowledge graph & semantic timeline',
-      'Premium model access',
-      '128K context window',
-      '5GB file storage',
-      'Advanced research workflows',
-      'Priority AI routing',
-      'Full personalization suite',
+      "2,000 messages per day",
+      "Maximum memory (10,000 items)",
+      "All advanced agents & automations",
+      "Knowledge graph & semantic timeline",
+      "Premium model access",
+      "128K context window",
+      "5GB file storage",
+      "Advanced research workflows",
+      "Priority AI routing",
+      "Full personalization suite",
     ],
     price_monthly: 50,
   },
@@ -134,8 +147,8 @@ export function getPlanLimits(tier: PlanTier): PlanLimits {
 export function canAccessFeature(tier: PlanTier, feature: keyof PlanLimits): boolean {
   const limits = PLAN_LIMITS[tier];
   const value = limits[feature];
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'number') return value > 0;
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value > 0;
   return true;
 }
 

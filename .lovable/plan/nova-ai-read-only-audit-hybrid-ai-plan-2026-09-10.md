@@ -27,17 +27,19 @@ So "do not rebuild" needs a decision from you: the NOVA code must first be broug
 - `supabase/functions/nova-chat/index.ts` — the only place real API calls happen. It maps NOVA model ids to OpenAI (`gpt-4o-mini`, `gpt-4o`, `o3-mini`) and Anthropic (`claude-sonnet-4-20250514`), reads `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`, and 503s when neither exists. No streaming; no OpenRouter, NVIDIA NIM, Groq or Ollama code exists anywhere.
 
 ### Provider references found
-| Provider | Where |
-|---|---|
-| OpenAI | `nova-chat` (real calls, model map, key, error text); stub + `ProviderId` in frontend |
-| Anthropic | `nova-chat` (real calls, model map, key, error text); stub + `ProviderId` |
-| Gemini | stub + `ProviderId` only |
-| Groq | stub + `ProviderId` only |
-| OpenRouter | none |
-| NVIDIA NIM | none |
-| Ollama | stub + `ProviderId` only, no implementation |
+
+| Provider   | Where                                                                                 |
+| ---------- | ------------------------------------------------------------------------------------- |
+| OpenAI     | `nova-chat` (real calls, model map, key, error text); stub + `ProviderId` in frontend |
+| Anthropic  | `nova-chat` (real calls, model map, key, error text); stub + `ProviderId`             |
+| Gemini     | stub + `ProviderId` only                                                              |
+| Groq       | stub + `ProviderId` only                                                              |
+| OpenRouter | none                                                                                  |
+| NVIDIA NIM | none                                                                                  |
+| Ollama     | stub + `ProviderId` only, no implementation                                           |
 
 ### State of the features
+
 - **Working**: auth, profiles/plans, conversations, messages, projects, tasks, memory, agents (CRUD), automations (CRUD), files, search, timeline, knowledge graph, security center, usage, settings, notifications, chat send/regenerate/model picker.
 - **Incomplete**: agents and automations never execute (no runner writes `agent_runs` / `automation_runs`); Research is five sequential model calls with no real web search despite the "Sources" wording; no streaming replies; plan caps unenforced; costs always null; file versioning tables unused by the UI; Settings has no provider/model/endpoint section.
 - **Broken today**: chat, and therefore Research, fails with a 503 unless an OpenAI or Anthropic key is set — both of which you are removing.
@@ -57,6 +59,7 @@ So "do not rebuild" needs a decision from you: the NOVA code must first be broug
 ## 4. Database changes
 
 Minimal, additive only, no resets:
+
 - extend the `provider` values written to `usage_records` (free text today, so no migration strictly needed);
 - optionally one new migration adding `GRANT` statements, which the existing migration omits entirely — worth adding since Supabase no longer grants Data API access by default;
 - Ollama endpoint/model preferences can live in the existing `preferences` table with no schema change.

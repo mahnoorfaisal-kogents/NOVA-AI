@@ -13,7 +13,9 @@ function getStoredTable(tableName: string): any[] {
   try {
     const raw = window.localStorage.getItem(STORAGE_PREFIX + tableName);
     if (raw) return JSON.parse(raw);
-  } catch {}
+  } catch (_e) {
+    // ignore parse error and fallback
+  }
   return getInitialData(tableName);
 }
 
@@ -21,7 +23,9 @@ function saveStoredTable(tableName: string, data: any[]) {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(STORAGE_PREFIX + tableName, JSON.stringify(data));
-  } catch {}
+  } catch (_e) {
+    // ignore storage error
+  }
 }
 
 function getInitialData(tableName: string): any[] {
@@ -203,7 +207,7 @@ class MockQueryBuilder {
 
   async update(updates: any) {
     const table = getStoredTable(this.tableName);
-    let updatedRows: any[] = [];
+    const updatedRows: any[] = [];
     const newTable = table.map((item) => {
       const match = this.filters.every((fn) => fn(item));
       if (match) {

@@ -1,21 +1,71 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Plus, Bot, Trash2, Play, MoreHorizontal, Zap, FileText, Search, BarChart3, Code, PenTool, Brain, Shield, CheckCircle2 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
-import type { Agent, AgentType } from '@/types';
+import { useState, useEffect, useCallback } from "react";
+import {
+  Plus,
+  Bot,
+  Trash2,
+  Play,
+  MoreHorizontal,
+  Zap,
+  FileText,
+  Search,
+  BarChart3,
+  Code,
+  PenTool,
+  Brain,
+  Shield,
+  CheckCircle2,
+} from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
+import type { Agent, AgentType } from "@/types";
 
 const AGENT_TYPES: { type: AgentType; label: string; icon: typeof Bot; description: string }[] = [
-  { type: 'general', label: 'General', icon: Bot, description: 'Versatile assistant for any task' },
-  { type: 'research', label: 'Research', icon: Search, description: 'Deep research and source analysis' },
-  { type: 'coding', label: 'Coding', icon: Code, description: 'Code generation and debugging' },
-  { type: 'writing', label: 'Writing', icon: PenTool, description: 'Content creation and editing' },
-  { type: 'data_analysis', label: 'Data Analysis', icon: BarChart3, description: 'Analyze and visualize data' },
-  { type: 'planning', label: 'Planning', icon: Zap, description: 'Strategic planning and roadmaps' },
-  { type: 'productivity', label: 'Productivity', icon: CheckCircle2, description: 'Task and workflow management' },
-  { type: 'file_analyst', label: 'File Analyst', icon: FileText, description: 'Document analysis and extraction' },
-  { type: 'security', label: 'Security', icon: Shield, description: 'Security analysis and review' },
-  { type: 'automation', label: 'Automation', icon: Zap, description: 'Automate repetitive tasks' },
-  { type: 'verification', label: 'Verification', icon: CheckCircle2, description: 'Verify and validate results' },
+  { type: "general", label: "General", icon: Bot, description: "Versatile assistant for any task" },
+  {
+    type: "research",
+    label: "Research",
+    icon: Search,
+    description: "Deep research and source analysis",
+  },
+  { type: "coding", label: "Coding", icon: Code, description: "Code generation and debugging" },
+  { type: "writing", label: "Writing", icon: PenTool, description: "Content creation and editing" },
+  {
+    type: "data_analysis",
+    label: "Data Analysis",
+    icon: BarChart3,
+    description: "Analyze and visualize data",
+  },
+  {
+    type: "planning",
+    label: "Planning",
+    icon: Zap,
+    description: "Strategic planning and roadmaps",
+  },
+  {
+    type: "productivity",
+    label: "Productivity",
+    icon: CheckCircle2,
+    description: "Task and workflow management",
+  },
+  {
+    type: "file_analyst",
+    label: "File Analyst",
+    icon: FileText,
+    description: "Document analysis and extraction",
+  },
+  {
+    type: "security",
+    label: "Security",
+    icon: Shield,
+    description: "Security analysis and review",
+  },
+  { type: "automation", label: "Automation", icon: Zap, description: "Automate repetitive tasks" },
+  {
+    type: "verification",
+    label: "Verification",
+    icon: CheckCircle2,
+    description: "Verify and validate results",
+  },
 ];
 
 export function AgentsView() {
@@ -23,40 +73,50 @@ export function AgentsView() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [newType, setNewType] = useState<AgentType>('general');
-  const [newInstructions, setNewInstructions] = useState('');
+  const [newName, setNewName] = useState("");
+  const [newType, setNewType] = useState<AgentType>("general");
+  const [newInstructions, setNewInstructions] = useState("");
 
   const load = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const { data } = await supabase.from('agents').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
-    setAgents(data as Agent[] ?? []);
+    const { data } = await supabase
+      .from("agents")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+    setAgents((data as Agent[]) ?? []);
     setLoading(false);
   }, [user]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !newName.trim()) return;
-    const { data } = await supabase.from('agents').insert({
-      user_id: user.id,
-      name: newName.trim(),
-      type: newType,
-      instructions: newInstructions.trim() || null,
-    }).select('*').maybeSingle();
+    const { data } = await supabase
+      .from("agents")
+      .insert({
+        user_id: user.id,
+        name: newName.trim(),
+        type: newType,
+        instructions: newInstructions.trim() || null,
+      })
+      .select("*")
+      .maybeSingle();
     if (data) {
       setAgents((prev) => [data as Agent, ...prev]);
-      setNewName('');
-      setNewType('general');
-      setNewInstructions('');
+      setNewName("");
+      setNewType("general");
+      setNewInstructions("");
       setShowCreate(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    await supabase.from('agents').delete().eq('id', id);
+    await supabase.from("agents").delete().eq("id", id);
     setAgents((prev) => prev.filter((a) => a.id !== id));
   };
 
@@ -69,7 +129,9 @@ export function AgentsView() {
           <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
             <Bot className="w-6 h-6 text-electric-400" /> Agents
           </h1>
-          <p className="text-sm text-secondary mt-1">Specialized AI agents for different types of work</p>
+          <p className="text-sm text-secondary mt-1">
+            Specialized AI agents for different types of work
+          </p>
         </div>
         <button
           onClick={() => setShowCreate(!showCreate)}
@@ -80,7 +142,10 @@ export function AgentsView() {
       </div>
 
       {showCreate && (
-        <form onSubmit={handleCreate} className="mb-6 glass-strong rounded-xl p-5 space-y-3 animate-fade-in-up">
+        <form
+          onSubmit={handleCreate}
+          className="mb-6 glass-strong rounded-xl p-5 space-y-3 animate-fade-in-up"
+        >
           <input
             type="text"
             value={newName}
@@ -97,8 +162,8 @@ export function AgentsView() {
                 onClick={() => setNewType(at.type)}
                 className={`flex items-center gap-2 p-2 rounded-lg border text-left transition-colors ${
                   newType === at.type
-                    ? 'border-electric-500 bg-electric-500/10 text-electric-300'
-                    : 'border-subtle text-secondary hover:text-primary hover:border-default'
+                    ? "border-electric-500 bg-electric-500/10 text-electric-300"
+                    : "border-subtle text-secondary hover:text-primary hover:border-default"
                 }`}
               >
                 <at.icon className="w-4 h-4 flex-shrink-0" />
@@ -114,15 +179,28 @@ export function AgentsView() {
             className="w-full px-3 py-2 bg-tertiary border border-subtle rounded-lg text-primary placeholder:text-tertiary focus:outline-none focus:border-electric-500 text-sm resize-none"
           />
           <div className="flex gap-2">
-            <button type="submit" className="px-4 py-2 nova-gradient text-white rounded-lg text-sm font-medium hover:opacity-90">Create</button>
-            <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 bg-tertiary text-secondary rounded-lg text-sm hover:text-primary">Cancel</button>
+            <button
+              type="submit"
+              className="px-4 py-2 nova-gradient text-white rounded-lg text-sm font-medium hover:opacity-90"
+            >
+              Create
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowCreate(false)}
+              className="px-4 py-2 bg-tertiary text-secondary rounded-lg text-sm hover:text-primary"
+            >
+              Cancel
+            </button>
           </div>
         </form>
       )}
 
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {[1, 2, 3, 4].map((i) => <div key={i} className="h-28 shimmer-bg rounded-xl" />)}
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-28 shimmer-bg rounded-xl" />
+          ))}
         </div>
       ) : agents.length === 0 ? (
         <div className="text-center py-16">
@@ -134,23 +212,34 @@ export function AgentsView() {
           {agents.map((agent) => {
             const Icon = getAgentIcon(agent.type);
             return (
-              <div key={agent.id} className="group glass rounded-xl p-4 hover:border-electric-500/20 transition-colors">
+              <div
+                key={agent.id}
+                className="group glass rounded-xl p-4 hover:border-electric-500/20 transition-colors"
+              >
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 rounded-lg bg-electric-500/15 flex items-center justify-center flex-shrink-0">
                     <Icon className="w-5 h-5 text-electric-400" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-primary text-sm">{agent.name}</h3>
-                    <p className="text-xs text-tertiary mt-0.5">{AGENT_TYPES.find((a) => a.type === agent.type)?.label}</p>
+                    <p className="text-xs text-tertiary mt-0.5">
+                      {AGENT_TYPES.find((a) => a.type === agent.type)?.label}
+                    </p>
                     {agent.instructions && (
-                      <p className="text-xs text-secondary mt-1 line-clamp-2">{agent.instructions}</p>
+                      <p className="text-xs text-secondary mt-1 line-clamp-2">
+                        {agent.instructions}
+                      </p>
                     )}
                     <div className="flex items-center gap-2 mt-2">
-                      <span className={`text-xs px-2 py-0.5 rounded ${
-                        agent.permissions === 'safe' ? 'bg-success-500/15 text-success-400' :
-                        agent.permissions === 'confirm' ? 'bg-warning-500/15 text-warning-400' :
-                        'bg-error-500/15 text-error-400'
-                      }`}>
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded ${
+                          agent.permissions === "safe"
+                            ? "bg-success-500/15 text-success-400"
+                            : agent.permissions === "confirm"
+                              ? "bg-warning-500/15 text-warning-400"
+                              : "bg-error-500/15 text-error-400"
+                        }`}
+                      >
                         {agent.permissions}
                       </span>
                       {agent.tools.length > 0 && (

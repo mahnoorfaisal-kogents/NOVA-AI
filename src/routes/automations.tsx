@@ -8,7 +8,10 @@ export const Route = createFileRoute("/automations")({
       { title: "NOVA — Automations" },
       { name: "description", content: "Automate NOVA with triggers, conditions and actions." },
       { property: "og:title", content: "NOVA — Automations" },
-      { property: "og:description", content: "Automate NOVA with triggers, conditions and actions." },
+      {
+        property: "og:description",
+        content: "Automate NOVA with triggers, conditions and actions.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],

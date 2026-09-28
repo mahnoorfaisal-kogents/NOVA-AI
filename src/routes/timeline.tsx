@@ -8,7 +8,10 @@ export const Route = createFileRoute("/timeline")({
       { title: "NOVA — Timeline" },
       { name: "description", content: "Browse a semantic timeline of everything you did in NOVA." },
       { property: "og:title", content: "NOVA — Timeline" },
-      { property: "og:description", content: "Browse a semantic timeline of everything you did in NOVA." },
+      {
+        property: "og:description",
+        content: "Browse a semantic timeline of everything you did in NOVA.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],

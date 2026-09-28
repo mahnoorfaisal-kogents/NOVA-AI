@@ -1,7 +1,8 @@
-import type { PlanTier, ModelInfo, ModelCapability } from '@/types';
-import { getModelsForPlan, getBestModelForTask } from '@/lib/models';
+import type { PlanTier, ModelInfo, ModelCapability } from "../../types/index.ts";
+import { getModelsForPlan, getBestModelForTask } from "../models.ts";
 
-export type TaskType = 'simple' | 'reasoning' | 'coding' | 'vision' | 'long_document' | 'multimodal';
+export type TaskType =
+  "simple" | "reasoning" | "coding" | "vision" | "long_document" | "multimodal";
 
 export interface RoutingResult {
   model: ModelInfo;
@@ -13,18 +14,18 @@ export function routeModel(
   taskType: TaskType,
   plan: PlanTier,
   userOverride?: string | null,
-  contextSize?: number
+  contextSize?: number,
 ): RoutingResult {
   const availableModels = getModelsForPlan(plan);
 
   if (availableModels.length === 0) {
-    return { model: availableModels[0], reason: 'No models available', fallback: null };
+    return { model: availableModels[0], reason: "No models available", fallback: null };
   }
 
   if (userOverride) {
     const overrideModel = availableModels.find((m) => m.id === userOverride);
     if (overrideModel) {
-      return { model: overrideModel, reason: 'User-selected model', fallback: null };
+      return { model: overrideModel, reason: "User-selected model", fallback: null };
     }
   }
 
@@ -54,27 +55,34 @@ export function routeModel(
 export function classifyTaskType(input: string): TaskType {
   const lower = input.toLowerCase();
 
-  if (lower.match(/\b(code|function|bug|debug|refactor|program|api|class|typescript|python|javascript|react|sql)\b/)) {
-    return 'coding';
+  if (
+    lower.match(
+      /\b(code|function|bug|debug|refactor|program|api|class|typescript|python|javascript|react|sql)\b/,
+    )
+  ) {
+    return "coding";
   }
 
   if (lower.match(/\b(image|photo|picture|see|look at|vision|diagram)\b/)) {
-    return 'vision';
+    return "vision";
   }
 
-  if (lower.match(/\b(analyze|document|large file|entire file|whole file|read this)\b/) && input.length > 2000) {
-    return 'long_document';
+  if (
+    lower.match(/\b(analyze|document|large file|entire file|whole file|read this)\b/) &&
+    input.length > 2000
+  ) {
+    return "long_document";
   }
 
   if (lower.match(/\b(analyze|reason|think through|step by step|why|explain why|deduce|infer)\b/)) {
-    return 'reasoning';
+    return "reasoning";
   }
 
   if (input.length < 100 && lower.match(/\b(hi|hello|hey|thanks|ok|yes|no|bye)\b/)) {
-    return 'simple';
+    return "simple";
   }
 
-  return 'simple';
+  return "simple";
 }
 
 export function getModelCapabilities(model: ModelInfo): ModelCapability[] {

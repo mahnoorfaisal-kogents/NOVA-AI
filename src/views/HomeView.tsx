@@ -1,12 +1,22 @@
-import { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from '@/lib/router';
+import { useEffect, useState, useCallback } from "react";
+import { useNavigate } from "@/lib/router";
 import {
-  Sparkles, MessageSquare, FolderKanban, CheckSquare,
-  Brain, Bot, Zap, ArrowRight, Activity, TrendingUp, Clock
-} from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
-import type { Conversation, Project, Task, Memory, ActivityEvent } from '@/types';
+  Sparkles,
+  MessageSquare,
+  FolderKanban,
+  CheckSquare,
+  Brain,
+  Bot,
+  Zap,
+  ArrowRight,
+  Activity,
+  TrendingUp,
+  Clock,
+} from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
+import { DataError } from "@/components/ui/data-error";
+import type { Conversation, Project, Task, Memory, ActivityEvent } from "@/types";
 
 export function HomeView() {
   const { user, profile } = useAuth();
@@ -17,49 +27,98 @@ export function HomeView() {
   const [memories, setMemories] = useState<Memory[]>([]);
   const [activity, setActivity] = useState<ActivityEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [commandInput, setCommandInput] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [commandInput, setCommandInput] = useState("");
 
   const loadData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
+    setError(null);
 
-    const [convRes, projRes, taskRes, memRes, actRes] = await Promise.all([
-      supabase.from('conversations').select('*').eq('user_id', user.id).eq('archived', false).order('updated_at', { ascending: false }).limit(5),
-      supabase.from('projects').select('*').eq('user_id', user.id).order('updated_at', { ascending: false }).limit(5),
-      supabase.from('tasks').select('*').eq('user_id', user.id).neq('status', 'completed').order('created_at', { ascending: false }).limit(5),
-      supabase.from('memories').select('*').eq('user_id', user.id).eq('archived', false).order('updated_at', { ascending: false }).limit(5),
-      supabase.from('activity_events').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
-    ]);
+    try {
+      const [convRes, projRes, taskRes, memRes, actRes] = await Promise.all([
+        supabase
+          .from("conversations")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("archived", false)
+          .order("updated_at", { ascending: false })
+          .limit(5),
+        supabase
+          .from("projects")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("updated_at", { ascending: false })
+          .limit(5),
+        supabase
+          .from("tasks")
+          .select("*")
+          .eq("user_id", user.id)
+          .neq("status", "completed")
+          .order("created_at", { ascending: false })
+          .limit(5),
+        supabase
+          .from("memories")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("archived", false)
+          .order("updated_at", { ascending: false })
+          .limit(5),
+        supabase
+          .from("activity_events")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(10),
+      ]);
 
-    setConversations(convRes.data as Conversation[] ?? []);
-    setProjects(projRes.data as Project[] ?? []);
-    setTasks(taskRes.data as Task[] ?? []);
-    setMemories(memRes.data as Memory[] ?? []);
-    setActivity(actRes.data as ActivityEvent[] ?? []);
-    setLoading(false);
+      const anyError =
+        convRes.error || projRes.error || taskRes.error || memRes.error || actRes.error;
+      if (anyError) {
+        console.error("[Dashboard] Error fetching dashboard data:", anyError.message);
+        setError(anyError.message);
+      }
+
+      setConversations((convRes.data as Conversation[]) ?? []);
+      setProjects((projRes.data as Project[]) ?? []);
+      setTasks((taskRes.data as Task[]) ?? []);
+      setMemories((memRes.data as Memory[]) ?? []);
+      setActivity((actRes.data as ActivityEvent[]) ?? []);
+    } catch (err: any) {
+      setError(err?.message || "Failed to load dashboard data");
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleCommand = (e: React.FormEvent) => {
     e.preventDefault();
     if (!commandInput.trim()) return;
-    navigate('/chat', { state: { initialMessage: commandInput } });
-    setCommandInput('');
+    navigate("/chat", { state: { initialMessage: commandInput } });
+    setCommandInput("");
   };
 
   const greeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 18) return 'Good afternoon';
-    return 'Good evening';
+    if (hour < 12) return "Good morning";
+    if (hour < 18) return "Good afternoon";
+    return "Good evening";
   };
 
   const stats = [
-    { label: 'Conversations', value: conversations.length, icon: MessageSquare, color: 'text-electric-400' },
-    { label: 'Projects', value: projects.length, icon: FolderKanban, color: 'text-cyan-400' },
-    { label: 'Active Tasks', value: tasks.length, icon: CheckSquare, color: 'text-success-400' },
-    { label: 'Memories', value: memories.length, icon: Brain, color: 'text-warning-400' },
+    {
+      label: "Conversations",
+      value: conversations.length,
+      icon: MessageSquare,
+      color: "text-electric-400",
+    },
+    { label: "Projects", value: projects.length, icon: FolderKanban, color: "text-cyan-400" },
+    { label: "Active Tasks", value: tasks.length, icon: CheckSquare, color: "text-success-400" },
+    { label: "Memories", value: memories.length, icon: Brain, color: "text-warning-400" },
   ];
 
   return (
@@ -72,7 +131,7 @@ export function HomeView() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-primary">
-              {greeting()}, {profile?.full_name?.split(' ')[0] || 'there'}
+              {greeting()}, {profile?.full_name?.split(" ")[0] || "there"}
             </h1>
             <p className="text-sm text-secondary">How can NOVA help you today?</p>
           </div>
@@ -99,6 +158,17 @@ export function HomeView() {
         </div>
       </form>
 
+      {/* Error state */}
+      {error && !loading && (
+        <div className="mb-8">
+          <DataError
+            title="Unable to sync some dashboard items"
+            message={error}
+            onRetry={loadData}
+          />
+        </div>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
         {stats.map((stat) => (
@@ -121,13 +191,18 @@ export function HomeView() {
                 <MessageSquare className="w-4 h-4 text-electric-400" />
                 Recent Conversations
               </h2>
-              <button onClick={() => navigate('/chat')} className="text-xs text-electric-400 hover:text-electric-300 flex items-center gap-1">
+              <button
+                onClick={() => navigate("/chat")}
+                className="text-xs text-electric-400 hover:text-electric-300 flex items-center gap-1"
+              >
                 View all <ArrowRight className="w-3 h-3" />
               </button>
             </div>
             {loading ? (
               <div className="space-y-2">
-                {[1, 2, 3].map((i) => <div key={i} className="h-12 shimmer-bg rounded-lg" />)}
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-12 shimmer-bg rounded-lg" />
+                ))}
               </div>
             ) : conversations.length === 0 ? (
               <div className="text-center py-8 text-tertiary text-sm">
@@ -159,13 +234,18 @@ export function HomeView() {
                 <CheckSquare className="w-4 h-4 text-success-400" />
                 Active Tasks
               </h2>
-              <button onClick={() => navigate('/tasks')} className="text-xs text-electric-400 hover:text-electric-300 flex items-center gap-1">
+              <button
+                onClick={() => navigate("/tasks")}
+                className="text-xs text-electric-400 hover:text-electric-300 flex items-center gap-1"
+              >
                 View all <ArrowRight className="w-3 h-3" />
               </button>
             </div>
             {loading ? (
               <div className="space-y-2">
-                {[1, 2].map((i) => <div key={i} className="h-10 shimmer-bg rounded-lg" />)}
+                {[1, 2].map((i) => (
+                  <div key={i} className="h-10 shimmer-bg rounded-lg" />
+                ))}
               </div>
             ) : tasks.length === 0 ? (
               <div className="text-center py-8 text-tertiary text-sm">No active tasks</div>
@@ -174,14 +254,20 @@ export function HomeView() {
                 {tasks.map((task) => (
                   <button
                     key={task.id}
-                    onClick={() => navigate('/tasks')}
+                    onClick={() => navigate("/tasks")}
                     className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-tertiary transition-colors text-left"
                   >
-                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                      task.priority === 'urgent' ? 'bg-error-500' :
-                      task.priority === 'high' ? 'bg-warning-500' :
-                      task.priority === 'medium' ? 'bg-electric-500' : 'bg-tertiary'
-                    }`} />
+                    <div
+                      className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                        task.priority === "urgent"
+                          ? "bg-error-500"
+                          : task.priority === "high"
+                            ? "bg-warning-500"
+                            : task.priority === "medium"
+                              ? "bg-electric-500"
+                              : "bg-tertiary"
+                      }`}
+                    />
                     <span className="flex-1 text-sm text-primary truncate">{task.title}</span>
                     {task.due_date && (
                       <span className="text-xs text-tertiary flex-shrink-0">
@@ -204,7 +290,10 @@ export function HomeView() {
                 <FolderKanban className="w-4 h-4 text-cyan-400" />
                 Projects
               </h2>
-              <button onClick={() => navigate('/projects')} className="text-xs text-electric-400 hover:text-electric-300">
+              <button
+                onClick={() => navigate("/projects")}
+                className="text-xs text-electric-400 hover:text-electric-300"
+              >
                 View all
               </button>
             </div>
@@ -218,7 +307,10 @@ export function HomeView() {
                     onClick={() => navigate(`/projects/${proj.id}`)}
                     className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-tertiary transition-colors text-left"
                   >
-                    <div className="w-3 h-3 rounded flex-shrink-0" style={{ background: proj.color || '#3b82f6' }} />
+                    <div
+                      className="w-3 h-3 rounded flex-shrink-0"
+                      style={{ background: proj.color || "#3b82f6" }}
+                    />
                     <span className="flex-1 text-sm text-primary truncate">{proj.name}</span>
                   </button>
                 ))}
@@ -233,7 +325,10 @@ export function HomeView() {
                 <Brain className="w-4 h-4 text-warning-400" />
                 Recent Memories
               </h2>
-              <button onClick={() => navigate('/memory')} className="text-xs text-electric-400 hover:text-electric-300">
+              <button
+                onClick={() => navigate("/memory")}
+                className="text-xs text-electric-400 hover:text-electric-300"
+              >
                 View all
               </button>
             </div>
@@ -244,7 +339,9 @@ export function HomeView() {
                 {memories.map((mem) => (
                   <div key={mem.id} className="px-3 py-2 bg-tertiary/50 rounded-lg">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs px-1.5 py-0.5 bg-electric-500/15 text-electric-300 rounded">{mem.category}</span>
+                      <span className="text-xs px-1.5 py-0.5 bg-electric-500/15 text-electric-300 rounded">
+                        {mem.category}
+                      </span>
                     </div>
                     <p className="text-xs text-secondary line-clamp-2">{mem.content}</p>
                   </div>
@@ -258,10 +355,10 @@ export function HomeView() {
             <h2 className="font-semibold text-primary mb-4">Quick Actions</h2>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { label: 'New Chat', icon: MessageSquare, to: '/chat' },
-                { label: 'New Project', icon: FolderKanban, to: '/projects' },
-                { label: 'Agents', icon: Bot, to: '/agents' },
-                { label: 'Automations', icon: Zap, to: '/automations' },
+                { label: "New Chat", icon: MessageSquare, to: "/chat" },
+                { label: "New Project", icon: FolderKanban, to: "/projects" },
+                { label: "Agents", icon: Bot, to: "/agents" },
+                { label: "Automations", icon: Zap, to: "/automations" },
               ].map((action) => (
                 <button
                   key={action.label}
@@ -288,7 +385,10 @@ export function HomeView() {
         ) : (
           <div className="space-y-1">
             {activity.map((evt) => (
-              <div key={evt.id} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-tertiary transition-colors">
+              <div
+                key={evt.id}
+                className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-tertiary transition-colors"
+              >
                 <div className="w-1.5 h-1.5 rounded-full bg-electric-500 flex-shrink-0" />
                 <span className="flex-1 text-sm text-secondary">{evt.title}</span>
                 <span className="text-xs text-tertiary flex items-center gap-1">

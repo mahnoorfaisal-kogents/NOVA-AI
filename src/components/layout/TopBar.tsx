@@ -1,9 +1,20 @@
-import { useState, useRef, useEffect } from 'react';
-import { Search, Bell, Settings, LogOut, User as UserIcon, ChevronDown, Command, Sun, Moon, Monitor } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useNotifications } from '@/contexts/NotificationContext';
-import { useTheme } from '@/contexts/ThemeContext';
-import { useNavigate } from '@/lib/router';
+import { useState, useRef, useEffect } from "react";
+import {
+  Search,
+  Bell,
+  Settings,
+  LogOut,
+  User as UserIcon,
+  ChevronDown,
+  Command,
+  Sun,
+  Moon,
+  Monitor,
+} from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNotifications } from "@/contexts/NotificationContext";
+import { useTheme } from "@/contexts/ThemeContext";
+import { useNavigate } from "@/lib/router";
 
 interface TopBarProps {
   onCommandPalette: () => void;
@@ -25,14 +36,22 @@ export function TopBar({ onCommandPalette }: TopBarProps) {
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) setShowNotifs(false);
-      if (profileRef.current && !profileRef.current.contains(e.target as Node)) setShowProfile(false);
+      if (profileRef.current && !profileRef.current.contains(e.target as Node))
+        setShowProfile(false);
       if (themeRef.current && !themeRef.current.contains(e.target as Node)) setShowThemeMenu(false);
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const themeIcon = theme === 'dark' ? <Moon className="w-4 h-4" /> : theme === 'light' ? <Sun className="w-4 h-4" /> : <Monitor className="w-4 h-4" />;
+  const themeIcon =
+    theme === "dark" ? (
+      <Moon className="w-4 h-4" />
+    ) : theme === "light" ? (
+      <Sun className="w-4 h-4" />
+    ) : (
+      <Monitor className="w-4 h-4" />
+    );
 
   return (
     <header className="h-14 glass border-b border-subtle flex items-center justify-between px-4 sticky top-0 z-20">
@@ -58,16 +77,23 @@ export function TopBar({ onCommandPalette }: TopBarProps) {
           </button>
           {showThemeMenu && (
             <div className="absolute right-0 top-full mt-1 glass-strong rounded-lg shadow-xl py-1 min-w-[140px] z-50">
-              {([
-                { value: 'dark', label: 'Dark', icon: Moon },
-                { value: 'light', label: 'Light', icon: Sun },
-                { value: 'system', label: 'System', icon: Monitor },
-              ] as const).map((opt) => (
+              {(
+                [
+                  { value: "dark", label: "Dark", icon: Moon },
+                  { value: "light", label: "Light", icon: Sun },
+                  { value: "system", label: "System", icon: Monitor },
+                ] as const
+              ).map((opt) => (
                 <button
                   key={opt.value}
-                  onClick={() => { setTheme(opt.value); setShowThemeMenu(false); }}
+                  onClick={() => {
+                    setTheme(opt.value);
+                    setShowThemeMenu(false);
+                  }}
                   className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${
-                    theme === opt.value ? 'text-electric-400 bg-electric-500/10' : 'text-secondary hover:text-primary hover:bg-tertiary'
+                    theme === opt.value
+                      ? "text-electric-400 bg-electric-500/10"
+                      : "text-secondary hover:text-primary hover:bg-tertiary"
                   }`}
                 >
                   <opt.icon className="w-4 h-4" />
@@ -87,7 +113,7 @@ export function TopBar({ onCommandPalette }: TopBarProps) {
             <Bell className="w-[18px] h-[18px]" />
             {unreadCount > 0 && (
               <span className="absolute top-1 right-1 w-4 h-4 bg-electric-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                {unreadCount > 9 ? '9+' : unreadCount}
+                {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             )}
           </button>
@@ -96,23 +122,30 @@ export function TopBar({ onCommandPalette }: TopBarProps) {
               <div className="flex items-center justify-between px-4 py-3 border-b border-subtle">
                 <span className="font-medium text-primary text-sm">Notifications</span>
                 {unreadCount > 0 && (
-                  <button onClick={markAllAsRead} className="text-xs text-electric-400 hover:text-electric-300">
+                  <button
+                    onClick={markAllAsRead}
+                    className="text-xs text-electric-400 hover:text-electric-300"
+                  >
                     Mark all read
                   </button>
                 )}
               </div>
               <div className="overflow-y-auto flex-1">
                 {notifications.length === 0 ? (
-                  <div className="px-4 py-8 text-center text-tertiary text-sm">No notifications</div>
+                  <div className="px-4 py-8 text-center text-tertiary text-sm">
+                    No notifications
+                  </div>
                 ) : (
                   notifications.slice(0, 20).map((n) => (
                     <button
                       key={n.id}
                       onClick={() => markAsRead(n.id)}
-                      className={`w-full text-left px-4 py-3 border-b border-subtle hover:bg-tertiary transition-colors ${!n.read ? 'bg-electric-500/5' : ''}`}
+                      className={`w-full text-left px-4 py-3 border-b border-subtle hover:bg-tertiary transition-colors ${!n.read ? "bg-electric-500/5" : ""}`}
                     >
                       <div className="flex items-start gap-2">
-                        {!n.read && <div className="w-2 h-2 rounded-full bg-electric-500 mt-1.5 flex-shrink-0" />}
+                        {!n.read && (
+                          <div className="w-2 h-2 rounded-full bg-electric-500 mt-1.5 flex-shrink-0" />
+                        )}
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-primary">{n.title}</p>
                           <p className="text-xs text-secondary mt-0.5">{n.message}</p>
@@ -136,7 +169,7 @@ export function TopBar({ onCommandPalette }: TopBarProps) {
                 <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
               ) : (
                 <span className="text-sm font-medium text-secondary">
-                  {(profile?.full_name || user?.email || 'U')[0].toUpperCase()}
+                  {(profile?.full_name || user?.email || "U")[0].toUpperCase()}
                 </span>
               )}
             </div>
@@ -145,20 +178,28 @@ export function TopBar({ onCommandPalette }: TopBarProps) {
           {showProfile && (
             <div className="absolute right-0 top-full mt-1 glass-strong rounded-lg shadow-xl py-1 min-w-[200px] z-50">
               <div className="px-3 py-2 border-b border-subtle">
-                <p className="text-sm font-medium text-primary truncate">{profile?.full_name || 'User'}</p>
+                <p className="text-sm font-medium text-primary truncate">
+                  {profile?.full_name || "User"}
+                </p>
                 <p className="text-xs text-tertiary truncate">{user?.email}</p>
                 <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 bg-electric-500/15 text-electric-300 text-xs rounded-full">
                   {profile?.plan?.toUpperCase()} Plan
                 </div>
               </div>
               <button
-                onClick={() => { setShowProfile(false); navigate('/settings'); }}
+                onClick={() => {
+                  setShowProfile(false);
+                  navigate("/settings");
+                }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm text-secondary hover:text-primary hover:bg-tertiary transition-colors"
               >
                 <Settings className="w-4 h-4" /> Settings
               </button>
               <button
-                onClick={() => { setShowProfile(false); navigate('/settings?tab=profile'); }}
+                onClick={() => {
+                  setShowProfile(false);
+                  navigate("/settings?tab=profile");
+                }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm text-secondary hover:text-primary hover:bg-tertiary transition-colors"
               >
                 <UserIcon className="w-4 h-4" /> Profile

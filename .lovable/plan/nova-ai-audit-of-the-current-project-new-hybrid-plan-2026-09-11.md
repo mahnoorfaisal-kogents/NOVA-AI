@@ -33,12 +33,12 @@ I sent one real request to this project's built-in AI service and read the reply
 
 ## 4. Existing provider references
 
-| Reference | Where | Action |
-|---|---|---|
-| OpenRouter | `src/lib/ai/hybrid.functions.ts`, `src/lib/ai/providers.ts`, `src/types/index.ts`, `src/lib/models.ts` | remove |
-| NVIDIA NIM | same four files | remove |
-| Ollama | `src/lib/ai/providers.ts`, `src/lib/models.ts`, `src/types/index.ts` | keep and improve |
-| OpenAI / Anthropic / Gemini / Groq | none in the code | nothing to do |
+| Reference                          | Where                                                                                                  | Action           |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------ | ---------------- |
+| OpenRouter                         | `src/lib/ai/hybrid.functions.ts`, `src/lib/ai/providers.ts`, `src/types/index.ts`, `src/lib/models.ts` | remove           |
+| NVIDIA NIM                         | same four files                                                                                        | remove           |
+| Ollama                             | `src/lib/ai/providers.ts`, `src/lib/models.ts`, `src/types/index.ts`                                   | keep and improve |
+| OpenAI / Anthropic / Gemini / Groq | none in the code                                                                                       | nothing to do    |
 
 ## 5. Files that need changing
 

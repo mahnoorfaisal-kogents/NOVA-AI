@@ -1,9 +1,20 @@
-import { useState, useEffect, useCallback } from 'react';
-import { BarChart3, TrendingUp, MessageSquare, Brain, Bot, Zap, FileText, DollarSign, Activity, Calendar } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
-import { PLANS } from '@/lib/plans';
-import type { UsageRecord } from '@/types';
+import { useState, useEffect, useCallback } from "react";
+import {
+  BarChart3,
+  TrendingUp,
+  MessageSquare,
+  Brain,
+  Bot,
+  Zap,
+  FileText,
+  DollarSign,
+  Activity,
+  Calendar,
+} from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
+import { PLANS } from "@/lib/plans";
+import type { UsageRecord } from "@/types";
 
 export function UsageView() {
   const { user, profile } = useAuth();
@@ -25,18 +36,32 @@ export function UsageView() {
     today.setHours(0, 0, 0, 0);
 
     const [usageRes, agentRes, autoRes, fileRes] = await Promise.all([
-      supabase.from('usage_records').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(100),
-      supabase.from('agent_runs').select('id', { count: 'exact' }).eq('user_id', user.id),
-      supabase.from('automation_runs').select('id', { count: 'exact' }).eq('user_id', user.id),
-      supabase.from('project_files').select('id, file_size', { count: 'exact' }).eq('user_id', user.id).eq('deleted', false),
+      supabase
+        .from("usage_records")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(100),
+      supabase.from("agent_runs").select("id", { count: "exact" }).eq("user_id", user.id),
+      supabase.from("automation_runs").select("id", { count: "exact" }).eq("user_id", user.id),
+      supabase
+        .from("project_files")
+        .select("id, file_size", { count: "exact" })
+        .eq("user_id", user.id)
+        .eq("deleted", false),
     ]);
 
-    const records = usageRes.data as UsageRecord[] ?? [];
+    const records = (usageRes.data as UsageRecord[]) ?? [];
     setUsageRecords(records);
 
     setStats({
-      messagesToday: records.filter((r) => new Date(r.created_at) >= today && r.resource_type === 'chat_message').length,
-      totalTokens: records.reduce((sum, r) => sum + (r.tokens_input ?? 0) + (r.tokens_output ?? 0), 0),
+      messagesToday: records.filter(
+        (r) => new Date(r.created_at) >= today && r.resource_type === "chat_message",
+      ).length,
+      totalTokens: records.reduce(
+        (sum, r) => sum + (r.tokens_input ?? 0) + (r.tokens_output ?? 0),
+        0,
+      ),
       agentRuns: agentRes.count ?? 0,
       automationsRun: autoRes.count ?? 0,
       filesStored: fileRes.count ?? 0,
@@ -45,17 +70,42 @@ export function UsageView() {
     setLoading(false);
   }, [user]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const plan = profile ? PLANS[profile.plan] : PLANS.free;
   const usagePercent = profile ? (stats.messagesToday / plan.limits.max_messages_per_day) * 100 : 0;
 
   const statCards = [
-    { label: 'Messages Today', value: stats.messagesToday, limit: plan.limits.max_messages_per_day, icon: MessageSquare, color: 'text-electric-400' },
-    { label: 'Total Tokens', value: stats.totalTokens.toLocaleString(), icon: TrendingUp, color: 'text-cyan-400' },
-    { label: 'Agent Runs', value: stats.agentRuns, limit: plan.limits.max_agents, icon: Bot, color: 'text-success-400' },
-    { label: 'Automations Run', value: stats.automationsRun, icon: Zap, color: 'text-warning-400' },
-    { label: 'Files Stored', value: stats.filesStored, limit: plan.limits.max_files, icon: FileText, color: 'text-electric-400' },
+    {
+      label: "Messages Today",
+      value: stats.messagesToday,
+      limit: plan.limits.max_messages_per_day,
+      icon: MessageSquare,
+      color: "text-electric-400",
+    },
+    {
+      label: "Total Tokens",
+      value: stats.totalTokens.toLocaleString(),
+      icon: TrendingUp,
+      color: "text-cyan-400",
+    },
+    {
+      label: "Agent Runs",
+      value: stats.agentRuns,
+      limit: plan.limits.max_agents,
+      icon: Bot,
+      color: "text-success-400",
+    },
+    { label: "Automations Run", value: stats.automationsRun, icon: Zap, color: "text-warning-400" },
+    {
+      label: "Files Stored",
+      value: stats.filesStored,
+      limit: plan.limits.max_files,
+      icon: FileText,
+      color: "text-electric-400",
+    },
   ];
 
   return (
@@ -73,17 +123,22 @@ export function UsageView() {
             <p className="text-xs text-secondary mt-0.5">{plan.description}</p>
           </div>
           <div className="text-right">
-            <p className="text-2xl font-bold text-primary">${plan.price_monthly}<span className="text-sm text-tertiary">/mo</span></p>
+            <p className="text-2xl font-bold text-primary">
+              ${plan.price_monthly}
+              <span className="text-sm text-tertiary">/mo</span>
+            </p>
           </div>
         </div>
         <div className="mb-2">
           <div className="flex items-center justify-between text-xs text-secondary mb-1">
             <span>Messages today</span>
-            <span>{stats.messagesToday} / {plan.limits.max_messages_per_day}</span>
+            <span>
+              {stats.messagesToday} / {plan.limits.max_messages_per_day}
+            </span>
           </div>
           <div className="h-2 bg-tertiary rounded-full overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all ${usagePercent > 80 ? 'bg-error-500' : usagePercent > 50 ? 'bg-warning-500' : 'bg-electric-500'}`}
+              className={`h-full rounded-full transition-all ${usagePercent > 80 ? "bg-error-500" : usagePercent > 50 ? "bg-warning-500" : "bg-electric-500"}`}
               style={{ width: `${Math.min(usagePercent, 100)}%` }}
             />
           </div>
@@ -110,18 +165,29 @@ export function UsageView() {
           <Activity className="w-4 h-4 text-electric-400" /> Recent Usage
         </h2>
         {loading ? (
-          <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="h-10 shimmer-bg rounded-lg" />)}</div>
+          <div className="space-y-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-10 shimmer-bg rounded-lg" />
+            ))}
+          </div>
         ) : usageRecords.length === 0 ? (
           <div className="text-center py-8 text-tertiary text-sm">No usage records yet</div>
         ) : (
           <div className="space-y-1">
             {usageRecords.slice(0, 20).map((rec) => (
-              <div key={rec.id} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-tertiary transition-colors">
+              <div
+                key={rec.id}
+                className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-tertiary transition-colors"
+              >
                 <div className="w-2 h-2 rounded-full bg-electric-500 flex-shrink-0" />
-                <span className="text-sm text-secondary flex-1">{rec.resource_type.replace(/_/g, ' ')}</span>
+                <span className="text-sm text-secondary flex-1">
+                  {rec.resource_type.replace(/_/g, " ")}
+                </span>
                 {rec.model && <span className="text-xs text-tertiary">{rec.model}</span>}
                 {rec.tokens_input && rec.tokens_output && (
-                  <span className="text-xs text-tertiary">{rec.tokens_input + rec.tokens_output} tokens</span>
+                  <span className="text-xs text-tertiary">
+                    {rec.tokens_input + rec.tokens_output} tokens
+                  </span>
                 )}
                 <span className="text-xs text-tertiary flex items-center gap-1">
                   <Calendar className="w-3 h-3" /> {new Date(rec.created_at).toLocaleString()}

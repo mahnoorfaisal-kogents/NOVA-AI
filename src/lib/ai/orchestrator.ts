@@ -9,9 +9,9 @@
  * Users only ever see modes (Auto, Fast, Reasoning, Coding, Research,
  * Private/Local, Offline/Local) — no providers, no API keys.
  */
-import type { ModelInfo, PlanTier } from '@/types';
-import { getModelById, getModelsForPlan, isLocalModel } from '@/lib/models';
-import { classifyTaskType, routeModel, type TaskType } from '@/lib/ai/router';
+import type { ModelInfo, PlanTier } from "@/types";
+import { getModelById, getModelsForPlan, isLocalModel } from "@/lib/models";
+import { classifyTaskType, routeModel, type TaskType } from "@/lib/ai/router";
 import {
   checkLocalAI,
   getOllamaSettings,
@@ -21,24 +21,24 @@ import {
   type ChatMessage,
   type ChatOptions,
   type LocalStatus,
-} from '@/lib/ai/providers';
+} from "@/lib/ai/providers";
 
 export const NOVA_MODES = [
-  'nova-auto',
-  'nova-fast',
-  'nova-reasoning',
-  'nova-coding',
-  'nova-research',
-  'nova-private',
-  'nova-offline',
+  "nova-auto",
+  "nova-fast",
+  "nova-reasoning",
+  "nova-coding",
+  "nova-research",
+  "nova-private",
+  "nova-offline",
 ] as const;
 
 export type NovaMode = (typeof NOVA_MODES)[number];
 
-export const LOCAL_MODES: NovaMode[] = ['nova-private', 'nova-offline'];
+export const LOCAL_MODES: NovaMode[] = ["nova-private", "nova-offline"];
 
 export function isLocalMode(mode: string | null | undefined): boolean {
-  return mode === 'nova-private' || mode === 'nova-offline';
+  return mode === "nova-private" || mode === "nova-offline";
 }
 
 export interface RouteDecision {
@@ -66,12 +66,12 @@ export function routeRequest(
       return {
         model: local,
         localOnly: true,
-        reason: 'You chose a mode that only runs on this device.',
+        reason: "You chose a mode that only runs on this device.",
       };
     }
   }
 
-  if (mode && mode !== 'nova-auto') {
+  if (mode && mode !== "nova-auto") {
     const picked = available.find((m) => m.id === mode);
     if (picked) {
       return {
@@ -93,9 +93,9 @@ export function routeRequest(
 
 function localUnavailable(model: ModelInfo, detail: string): AIResponse {
   return {
-    content: '',
+    content: "",
     model: model.id,
-    provider: 'ollama',
+    provider: "ollama",
     tokensInput: 0,
     tokensOutput: 0,
     error: `${detail} ${model.display_name} only runs on this device, so NOVA will not use the cloud instead.`,
@@ -115,8 +115,8 @@ export async function orchestrateChat(
   const { model } = decision;
 
   if (decision.localOnly) {
-    if (model.provider !== 'ollama') {
-      return localUnavailable(model, 'This mode is misconfigured.');
+    if (model.provider !== "ollama") {
+      return localUnavailable(model, "This mode is misconfigured.");
     }
     const { baseUrl, model: localModel } = getOllamaSettings();
     const status = await checkLocalAI(baseUrl);
@@ -129,7 +129,7 @@ export async function orchestrateChat(
         `The model "${localModel}" is not installed on this machine. Pick an installed model in Settings → Local AI.`,
       );
     }
-    return getProvider('ollama').chat(messages, model.id, options);
+    return getProvider("ollama").chat(messages, model.id, options);
   }
 
   return getProvider(model.provider).chat(messages, model.id, options);
@@ -142,8 +142,8 @@ export async function askNova(
   plan: PlanTier,
   options?: ChatOptions,
 ): Promise<AIResponse & { decision: RouteDecision }> {
-  const lastUser = [...messages].reverse().find((m) => m.role === 'user');
-  const decision = routeRequest(mode, plan, lastUser?.content ?? '');
+  const lastUser = [...messages].reverse().find((m) => m.role === "user");
+  const decision = routeRequest(mode, plan, lastUser?.content ?? "");
   const response = await orchestrateChat(messages, decision, options);
   return { ...response, decision };
 }
@@ -159,32 +159,42 @@ export async function testLocalModel(
   const started = Date.now();
   const status = await checkLocalAI(baseUrl);
   if (!status.reachable) {
-    return { ok: false, reply: '', error: status.error ?? 'Local AI is not reachable.', ms: Date.now() - started };
+    return {
+      ok: false,
+      reply: "",
+      error: status.error ?? "Local AI is not reachable.",
+      ms: Date.now() - started,
+    };
   }
   if (!model) {
-    return { ok: false, reply: '', error: 'Pick a local model first.', ms: Date.now() - started };
+    return { ok: false, reply: "", error: "Pick a local model first.", ms: Date.now() - started };
   }
   if (status.models.length > 0 && !status.models.includes(model)) {
     return {
       ok: false,
-      reply: '',
+      reply: "",
       error: `"${model}" is not installed on this machine. Install it yourself with Ollama, then select it here.`,
       ms: Date.now() - started,
     };
   }
 
-  const response = await getProvider('ollama').chat(
-    [{ role: 'user', content: 'Reply with exactly: OK' }],
+  const response = await getProvider("ollama").chat(
+    [{ role: "user", content: "Reply with exactly: OK" }],
     model,
-    { systemPrompt: 'You are a connection test. Answer in one short word.', maxTokens: 20 },
+    { systemPrompt: "You are a connection test. Answer in one short word.", maxTokens: 20 },
   );
 
   if (response.error) {
-    return { ok: false, reply: '', error: response.error, ms: Date.now() - started };
+    return { ok: false, reply: "", error: response.error, ms: Date.now() - started };
   }
   const reply = response.content.trim();
   if (!reply) {
-    return { ok: false, reply: '', error: 'The local model answered with nothing.', ms: Date.now() - started };
+    return {
+      ok: false,
+      reply: "",
+      error: "The local model answered with nothing.",
+      ms: Date.now() - started,
+    };
   }
   return { ok: true, reply, error: null, ms: Date.now() - started };
 }
@@ -204,22 +214,22 @@ export function localTroubleshooting(
     return {
       headline: `NOVA could not reach local AI at ${baseUrl}.`,
       steps: [
-        'Install Ollama on this computer from ollama.com if you have not already.',
-        'Start it, then check that it is running (a small Ollama icon appears in your menu bar or system tray).',
+        "Install Ollama on this computer from ollama.com if you have not already.",
+        "Start it, then check that it is running (a small Ollama icon appears in your menu bar or system tray).",
         `Confirm the address above matches where Ollama listens — the usual one is ${DEFAULT_OLLAMA_URL}.`,
-        'If you changed the port or run Ollama on another machine, put that full address in the field above.',
-        'Press Check again. Private and Offline modes stay unavailable until this succeeds — NOVA will not use the cloud instead.',
+        "If you changed the port or run Ollama on another machine, put that full address in the field above.",
+        "Press Check again. Private and Offline modes stay unavailable until this succeeds — NOVA will not use the cloud instead.",
       ],
     };
   }
 
   if (status.models.length === 0) {
     return {
-      headline: 'Local AI is running, but no models are installed on this machine.',
+      headline: "Local AI is running, but no models are installed on this machine.",
       steps: [
-        'Open a terminal on this computer.',
-        'Install a model yourself, for example: ollama pull llama3.1',
-        'Press Check again, then pick the model in the list above.',
+        "Open a terminal on this computer.",
+        "Install a model yourself, for example: ollama pull llama3.1",
+        "Press Check again, then pick the model in the list above.",
       ],
     };
   }
@@ -228,18 +238,18 @@ export function localTroubleshooting(
     return {
       headline: `"${selectedModel}" is not installed on this machine.`,
       steps: [
-        `Pick one of the installed models instead: ${status.models.slice(0, 5).join(', ')}.`,
+        `Pick one of the installed models instead: ${status.models.slice(0, 5).join(", ")}.`,
         `Or install it yourself with: ollama pull ${selectedModel}`,
-        'Press Check again after installing.',
+        "Press Check again after installing.",
       ],
     };
   }
 
   if (!selectedModel) {
     return {
-      headline: 'Pick a model for local answers.',
+      headline: "Pick a model for local answers.",
       steps: [
-        'Choose one of the installed models above.',
+        "Choose one of the installed models above.",
         'Then press "Test this model" to confirm it can reply.',
       ],
     };
@@ -252,7 +262,7 @@ export interface ModeTestResult {
   mode: NovaMode;
   label: string;
   /** Where the answer came from, or would have come from. */
-  source: 'NOVA Cloud' | 'On this device';
+  source: "NOVA Cloud" | "On this device";
   ok: boolean;
   ms: number;
   reply: string;
@@ -268,42 +278,42 @@ export async function runModeCheck(
   plan: PlanTier,
   modes: readonly NovaMode[] = NOVA_MODES,
 ): Promise<ModeTestResult[]> {
-  const prompt = 'Reply with exactly: OK';
+  const prompt = "Reply with exactly: OK";
   const results: ModeTestResult[] = [];
 
   for (const mode of modes) {
     const requested = getModelById(mode);
     const included = getModelsForPlan(plan).some((m) => m.id === mode);
-    if (requested && mode !== 'nova-auto' && !included) {
+    if (requested && mode !== "nova-auto" && !included) {
       results.push({
         mode,
         label: requested.display_name,
-        source: requested.provider === 'ollama' ? 'On this device' : 'NOVA Cloud',
+        source: requested.provider === "ollama" ? "On this device" : "NOVA Cloud",
         ok: false,
         ms: 0,
-        reply: '',
-        error: 'Not included in your current plan, so this mode was not tested.',
+        reply: "",
+        error: "Not included in your current plan, so this mode was not tested.",
       });
       continue;
     }
 
     const decision = routeRequest(mode, plan, prompt);
     const started = Date.now();
-    const response = await orchestrateChat(
-      [{ role: 'user', content: prompt }],
-      decision,
-      { systemPrompt: 'You are a connection test. Answer in one short word.', maxTokens: 20 },
-    );
+    const response = await orchestrateChat([{ role: "user", content: prompt }], decision, {
+      systemPrompt: "You are a connection test. Answer in one short word.",
+      maxTokens: 20,
+    });
     const ms = Date.now() - started;
     const reply = response.content.trim();
     results.push({
       mode,
       label: decision.model.display_name,
-      source: decision.localOnly || response.provider === 'ollama' ? 'On this device' : 'NOVA Cloud',
+      source:
+        decision.localOnly || response.provider === "ollama" ? "On this device" : "NOVA Cloud",
       ok: !response.error && reply.length > 0,
       ms,
       reply,
-      error: response.error ?? (reply ? null : 'This mode answered with nothing.'),
+      error: response.error ?? (reply ? null : "This mode answered with nothing."),
     });
   }
 
@@ -315,12 +325,12 @@ export function formatModeReport(results: ModeTestResult[], when?: string): stri
   const stamp = when ?? new Date().toISOString();
   const lines = [
     `NOVA mode check — ${stamp}`,
-    ''.padEnd(40, '-'),
+    "".padEnd(40, "-"),
     ...results.map((r) => {
-      const state = r.ok ? 'OK' : 'FAILED';
-      const detail = r.ok ? `reply: "${r.reply}"` : `error: ${r.error ?? 'unknown error'}`;
+      const state = r.ok ? "OK" : "FAILED";
+      const detail = r.ok ? `reply: "${r.reply}"` : `error: ${r.error ?? "unknown error"}`;
       return `${state} · ${r.label} (${r.mode}) · ${r.source} · ${r.ms} ms · ${detail}`;
     }),
   ];
-  return lines.join('\n');
+  return lines.join("\n");
 }
