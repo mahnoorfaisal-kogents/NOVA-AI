@@ -60,3 +60,17 @@ test("Task Classification: accurately identifies simple greetings", () => {
   assert.equal(classifyTaskType("hello"), "simple");
   assert.equal(classifyTaskType("hi"), "simple");
 });
+
+import { routeRequest } from "../src/lib/ai/orchestrator.ts";
+
+test("Local routing: private mode resolves to Ollama and is cloud-ineligible", () => {
+  const decision = routeRequest("nova-private", "free", "hello");
+  assert.equal(decision.localOnly, true);
+  assert.equal(decision.model.provider, "ollama");
+});
+
+test("Local routing: offline mode resolves to Ollama and is cloud-ineligible", () => {
+  const decision = routeRequest("nova-offline", "free", "hello");
+  assert.equal(decision.localOnly, true);
+  assert.equal(decision.model.provider, "ollama");
+});
